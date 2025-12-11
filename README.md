@@ -20,7 +20,7 @@ Extensão Chrome Manifest V3 para gravação de tela, aba ou janela em alta qual
 2. Abra o Chrome e acesse `chrome://extensions/`
 3. Ative o **Modo Desenvolvedor** (toggle no canto superior direito)
 4. Clique em **Carregar sem compactação**
-5. Selecione a pasta `gravador-de-tela`
+5. Selecione a pasta `gravador-de-tela`...
 
 ### Atalhos de Teclado
 

@@ -1,0 +1,63 @@
+{
+  "manifest_version": 3,
+  "name": "Gravador de Tela Pro",
+  "short_name": "ScreenRec",
+  "version": "1.0.0",
+  "description": "Grave sua tela, aba ou janela em até 4K com captura de áudio (microfone + aba). Salva localmente em WebM. 100% offline.",
+
+  "icons": {
+    "16": "icons/icon16.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  },
+
+  "action": {
+    "default_popup": "popup/popup.html",
+    "default_icon": {
+      "16": "icons/icon16.png",
+      "48": "icons/icon48.png",
+      "128": "icons/icon128.png"
+    },
+    "default_title": "Gravador de Tela"
+  },
+
+  "background": {
+    "service_worker": "background.js",
+    "type": "module"
+  },
+
+  "permissions": [
+    "tabCapture",
+    "desktopCapture",
+    "offscreen",
+    "storage",
+    "downloads",
+    "activeTab"
+  ],
+
+  "commands": {
+    "_execute_action": {
+      "suggested_key": {
+        "default": "Alt+Shift+R",
+        "windows": "Alt+Shift+R",
+        "mac": "Alt+Shift+R"
+      },
+      "description": "Abrir popup de gravação"
+    },
+    "toggle-recording": {
+      "suggested_key": {
+        "default": "Alt+Shift+S",
+        "windows": "Alt+Shift+S",
+        "mac": "Alt+Shift+S"
+      },
+      "description": "Iniciar/Parar gravação"
+    }
+  },
+
+  "options_ui": {
+    "page": "options/options.html",
+    "open_in_tab": true
+  },
+
+  "minimum_chrome_version": "116"
+}

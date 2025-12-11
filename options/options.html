@@ -1,0 +1,377 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Configurações - Gravador de Tela</title>
+    <link rel="stylesheet" href="options.css" />
+  </head>
+  <body>
+    <div class="options-container">
+      <!-- Header -->
+      <header class="header">
+        <div class="header-content">
+          <div class="logo">
+            <div class="logo-icon">
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="none">
+                <circle
+                  cx="12"
+                  cy="12"
+                  r="10"
+                  stroke="currentColor"
+                  stroke-width="2"
+                />
+                <circle cx="12" cy="12" r="5" fill="currentColor" />
+              </svg>
+            </div>
+            <div class="logo-info">
+              <h1>Gravador de Tela Pro</h1>
+              <span class="version">Versão 1.0.0</span>
+            </div>
+          </div>
+        </div>
+      </header>
+
+      <!-- Main Content -->
+      <main class="main-content">
+        <!-- Video Settings -->
+        <section class="settings-section">
+          <h2 class="section-title">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+              <path
+                d="M23 7L16 12L23 17V7Z"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linejoin="round"
+              />
+              <rect
+                x="1"
+                y="5"
+                width="15"
+                height="14"
+                rx="2"
+                stroke="currentColor"
+                stroke-width="2"
+              />
+            </svg>
+            Configurações de Vídeo
+          </h2>
+
+          <div class="settings-grid">
+            <div class="setting-item">
+              <label class="setting-label" for="defaultQuality"
+                >Qualidade Padrão</label
+              >
+              <select id="defaultQuality" class="select-input">
+                <option value="720p">720p HD (1280x720)</option>
+                <option value="1080p">1080p Full HD (1920x1080)</option>
+                <option value="1440p">1440p QHD (2560x1440)</option>
+                <option value="4k">4K Ultra HD (3840x2160)</option>
+              </select>
+              <p class="setting-hint">Resolução máxima da gravação</p>
+            </div>
+
+            <div class="setting-item">
+              <label class="setting-label" for="defaultFps"
+                >Taxa de Quadros</label
+              >
+              <select id="defaultFps" class="select-input">
+                <option value="30">30 FPS (Recomendado)</option>
+                <option value="60">60 FPS (Suave)</option>
+              </select>
+              <p class="setting-hint">FPS mais alto = arquivo maior</p>
+            </div>
+
+            <div class="setting-item">
+              <label class="setting-label" for="defaultCodec"
+                >Codec de Vídeo</label
+              >
+              <select id="defaultCodec" class="select-input">
+                <option value="vp9">VP9 (Melhor qualidade)</option>
+                <option value="vp8">VP8 (Mais compatível)</option>
+                <option value="h264">H.264 (Aceleração de hardware)</option>
+              </select>
+              <p class="setting-hint">VP9 oferece melhor compressão</p>
+            </div>
+          </div>
+        </section>
+
+        <!-- Audio Settings -->
+        <section class="settings-section">
+          <h2 class="section-title">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+              <path
+                d="M12 1C11.2044 1 10.4413 1.31607 9.87868 1.87868C9.31607 2.44129 9 3.20435 9 4V12C9 12.7956 9.31607 13.5587 9.87868 14.1213C10.4413 14.6839 11.2044 15 12 15C12.7956 15 13.5587 14.6839 14.1213 14.1213C14.6839 13.5587 15 12.7956 15 12V4C15 3.20435 14.6839 2.44129 14.1213 1.87868C13.5587 1.31607 12.7956 1 12 1Z"
+                stroke="currentColor"
+                stroke-width="2"
+              />
+              <path
+                d="M19 10V12C19 13.8565 18.2625 15.637 16.9497 16.9497C15.637 18.2625 13.8565 19 12 19C10.1435 19 8.36301 18.2625 7.05025 16.9497C5.7375 15.637 5 13.8565 5 12V10"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+              />
+              <path
+                d="M12 19V23"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+              />
+              <path
+                d="M8 23H16"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+              />
+            </svg>
+            Configurações de Áudio
+          </h2>
+
+          <div class="settings-grid">
+            <div class="setting-item full-width">
+              <div class="toggle-row">
+                <div class="toggle-info">
+                  <label class="setting-label">Capturar Áudio do Sistema</label>
+                  <p class="setting-hint">
+                    Grava o áudio da aba ou tela compartilhada
+                  </p>
+                </div>
+                <label class="toggle">
+                  <input type="checkbox" id="captureAudio" checked />
+                  <span class="toggle-slider"></span>
+                </label>
+              </div>
+            </div>
+
+            <div class="setting-item full-width">
+              <div class="toggle-row">
+                <div class="toggle-info">
+                  <label class="setting-label">Capturar Microfone</label>
+                  <p class="setting-hint">Adiciona sua voz à gravação</p>
+                </div>
+                <label class="toggle">
+                  <input type="checkbox" id="captureMic" />
+                  <span class="toggle-slider"></span>
+                </label>
+              </div>
+            </div>
+
+            <div class="setting-item" id="tabVolumeContainer">
+              <label class="setting-label">Volume do Sistema</label>
+              <div class="slider-container">
+                <input
+                  type="range"
+                  id="tabVolume"
+                  min="0"
+                  max="100"
+                  value="100"
+                  class="slider-input"
+                />
+                <span class="slider-value" id="tabVolumeValue">100%</span>
+              </div>
+            </div>
+
+            <div class="setting-item" id="micVolumeContainer">
+              <label class="setting-label">Volume do Microfone</label>
+              <div class="slider-container">
+                <input
+                  type="range"
+                  id="micVolume"
+                  min="0"
+                  max="100"
+                  value="100"
+                  class="slider-input"
+                />
+                <span class="slider-value" id="micVolumeValue">100%</span>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- Recording Settings -->
+        <section class="settings-section">
+          <h2 class="section-title">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+              <circle
+                cx="12"
+                cy="12"
+                r="10"
+                stroke="currentColor"
+                stroke-width="2"
+              />
+              <circle cx="12" cy="12" r="4" fill="currentColor" />
+            </svg>
+            Configurações de Gravação
+          </h2>
+
+          <div class="settings-grid">
+            <div class="setting-item full-width">
+              <div class="toggle-row">
+                <div class="toggle-info">
+                  <label class="setting-label">Contagem Regressiva</label>
+                  <p class="setting-hint">Mostra contagem antes de iniciar</p>
+                </div>
+                <label class="toggle">
+                  <input type="checkbox" id="showCountdown" checked />
+                  <span class="toggle-slider"></span>
+                </label>
+              </div>
+            </div>
+
+            <div class="setting-item" id="countdownContainer">
+              <label class="setting-label" for="countdownSeconds"
+                >Segundos</label
+              >
+              <select id="countdownSeconds" class="select-input">
+                <option value="3">3 segundos</option>
+                <option value="5">5 segundos</option>
+                <option value="10">10 segundos</option>
+              </select>
+            </div>
+
+            <div class="setting-item full-width">
+              <div class="toggle-row">
+                <div class="toggle-info">
+                  <label class="setting-label">Salvar Automaticamente</label>
+                  <p class="setting-hint">Não pergunta onde salvar o arquivo</p>
+                </div>
+                <label class="toggle">
+                  <input type="checkbox" id="autoSave" checked />
+                  <span class="toggle-slider"></span>
+                </label>
+              </div>
+            </div>
+
+            <div class="setting-item full-width">
+              <label class="setting-label" for="filenamePattern"
+                >Padrão do Nome do Arquivo</label
+              >
+              <input
+                type="text"
+                id="filenamePattern"
+                class="text-input"
+                value="gravacao_{date}_{time}"
+                placeholder="gravacao_{date}_{time}"
+              />
+              <p class="setting-hint">
+                Use {date} para data e {time} para hora
+              </p>
+            </div>
+          </div>
+        </section>
+
+        <!-- Keyboard Shortcuts -->
+        <section class="settings-section">
+          <h2 class="section-title">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+              <rect
+                x="2"
+                y="6"
+                width="20"
+                height="12"
+                rx="2"
+                stroke="currentColor"
+                stroke-width="2"
+              />
+              <path
+                d="M6 10H6.01"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+              />
+              <path
+                d="M10 10H10.01"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+              />
+              <path
+                d="M14 10H14.01"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+              />
+              <path
+                d="M18 10H18.01"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+              />
+              <path
+                d="M8 14H16"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+              />
+            </svg>
+            Atalhos de Teclado
+          </h2>
+
+          <div class="shortcuts-list">
+            <div class="shortcut-item">
+              <span class="shortcut-description">Abrir popup</span>
+              <kbd class="shortcut-keys">Alt + Shift + R</kbd>
+            </div>
+            <div class="shortcut-item">
+              <span class="shortcut-description">Iniciar/Parar gravação</span>
+              <kbd class="shortcut-keys">Alt + Shift + S</kbd>
+            </div>
+          </div>
+
+          <p class="shortcuts-hint">
+            Para alterar os atalhos, acesse
+            <a href="#" id="openShortcuts">chrome://extensions/shortcuts</a>
+          </p>
+        </section>
+
+        <!-- About -->
+        <section class="settings-section about-section">
+          <h2 class="section-title">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+              <circle
+                cx="12"
+                cy="12"
+                r="10"
+                stroke="currentColor"
+                stroke-width="2"
+              />
+              <path
+                d="M12 16V12"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+              />
+              <circle cx="12" cy="8" r="1" fill="currentColor" />
+            </svg>
+            Sobre
+          </h2>
+
+          <div class="about-content">
+            <p>
+              <strong>Gravador de Tela Pro</strong> é uma extensão 100% local
+              que grava sua tela, janela ou aba do navegador em alta qualidade.
+            </p>
+            <p>
+              ✅ Nenhum dado é enviado para servidores externos<br />
+              ✅ Todas as gravações são salvas localmente<br />
+              ✅ Código aberto e transparente
+            </p>
+            <p class="copyright">© 2024 - Desenvolvido com ❤️</p>
+          </div>
+        </section>
+      </main>
+
+      <!-- Footer -->
+      <footer class="footer">
+        <button class="btn btn-secondary" id="resetBtn">
+          Restaurar Padrões
+        </button>
+        <button class="btn btn-primary" id="saveBtn">
+          Salvar Configurações
+        </button>
+      </footer>
+    </div>
+
+    <script src="options.js" type="module"></script>
+  </body>
+</html>

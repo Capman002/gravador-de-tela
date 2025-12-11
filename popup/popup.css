@@ -1,0 +1,519 @@
+/* =============== CSS Variables =============== */
+:root {
+  --bg-primary: #0a0a0f;
+  --bg-secondary: #12121a;
+  --bg-tertiary: #1a1a25;
+  --bg-hover: #222230;
+
+  --text-primary: #ffffff;
+  --text-secondary: #9ca3af;
+  --text-muted: #6b7280;
+
+  --accent-primary: #ef4444;
+  --accent-secondary: #dc2626;
+  --accent-glow: rgba(239, 68, 68, 0.3);
+
+  --success: #22c55e;
+  --warning: #f59e0b;
+  --info: #3b82f6;
+
+  --border-color: #2a2a3a;
+  --border-radius: 12px;
+  --border-radius-sm: 8px;
+
+  --transition-fast: 0.15s ease;
+  --transition-normal: 0.25s ease;
+
+  --shadow-sm: 0 2px 4px rgba(0, 0, 0, 0.3);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.4);
+  --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.5);
+  --shadow-glow: 0 0 30px var(--accent-glow);
+}
+
+/* =============== Reset & Base =============== */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: "Segoe UI", -apple-system, BlinkMacSystemFont, sans-serif;
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  min-width: 340px;
+  max-width: 340px;
+  overflow: hidden;
+}
+
+/* =============== Container =============== */
+.popup-container {
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+/* =============== Header =============== */
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.logo {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.logo-icon {
+  width: 32px;
+  height: 32px;
+  background: linear-gradient(135deg, var(--accent-primary) 0%, #f97316 100%);
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+}
+
+.logo-text {
+  font-size: 16px;
+  font-weight: 700;
+  background: linear-gradient(
+    135deg,
+    var(--text-primary) 0%,
+    var(--text-secondary) 100%
+  );
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.settings-btn {
+  width: 36px;
+  height: 36px;
+  border: none;
+  background: var(--bg-secondary);
+  border-radius: var(--border-radius-sm);
+  color: var(--text-secondary);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all var(--transition-fast);
+}
+
+.settings-btn:hover {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+}
+
+/* =============== Status Display =============== */
+.status-display {
+  background: var(--bg-secondary);
+  border-radius: var(--border-radius);
+  padding: 20px;
+  text-align: center;
+  border: 1px solid var(--border-color);
+}
+
+.timer {
+  font-size: 42px;
+  font-weight: 700;
+  font-family: "SF Mono", "Consolas", monospace;
+  letter-spacing: 2px;
+  color: var(--text-primary);
+  margin-bottom: 6px;
+}
+
+.timer.recording {
+  color: var(--accent-primary);
+  text-shadow: 0 0 30px var(--accent-glow);
+}
+
+.timer.paused {
+  color: var(--warning);
+  animation: pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+.status-text {
+  font-size: 13px;
+  color: var(--text-secondary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+
+.status-text::before {
+  content: "";
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--text-muted);
+}
+
+.status-text.recording::before {
+  background: var(--accent-primary);
+  animation: blink 1s ease-in-out infinite;
+}
+
+.status-text.paused::before {
+  background: var(--warning);
+}
+
+@keyframes blink {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.3;
+  }
+}
+
+/* =============== Options Panel =============== */
+.options-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.options-panel.hidden {
+  display: none;
+}
+
+.option-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.option-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+/* Source Buttons */
+.source-buttons {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+
+.source-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 12px 8px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--border-radius-sm);
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  font-size: 11px;
+  font-weight: 500;
+}
+
+.source-btn:hover {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+  border-color: var(--text-muted);
+}
+
+.source-btn.active {
+  background: linear-gradient(
+    135deg,
+    rgba(239, 68, 68, 0.15) 0%,
+    rgba(249, 115, 22, 0.15) 100%
+  );
+  border-color: var(--accent-primary);
+  color: var(--text-primary);
+}
+
+/* Select Input */
+.select-input {
+  width: 100%;
+  padding: 10px 14px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--border-radius-sm);
+  color: var(--text-primary);
+  font-size: 13px;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg width='12' height='12' viewBox='0 0 12 12' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M3 4.5L6 7.5L9 4.5' stroke='%239ca3af' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  padding-right: 36px;
+}
+
+.select-input:hover {
+  border-color: var(--text-muted);
+}
+
+.select-input:focus {
+  outline: none;
+  border-color: var(--accent-primary);
+}
+
+.select-input option {
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+  padding: 8px;
+}
+
+/* FPS Buttons */
+.fps-buttons {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 8px;
+}
+
+.fps-btn {
+  padding: 10px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--border-radius-sm);
+  color: var(--text-secondary);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.fps-btn:hover {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+}
+
+.fps-btn.active {
+  background: var(--bg-hover);
+  border-color: var(--accent-primary);
+  color: var(--text-primary);
+}
+
+/* Audio Options */
+.audio-options {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.toggle-option {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+}
+
+.toggle-option input {
+  display: none;
+}
+
+.toggle-slider {
+  width: 38px;
+  height: 20px;
+  background: var(--bg-tertiary);
+  border-radius: 10px;
+  position: relative;
+  transition: all var(--transition-fast);
+  flex-shrink: 0;
+}
+
+.toggle-slider::after {
+  content: "";
+  position: absolute;
+  width: 16px;
+  height: 16px;
+  background: var(--text-muted);
+  border-radius: 50%;
+  top: 2px;
+  left: 2px;
+  transition: all var(--transition-fast);
+}
+
+.toggle-option input:checked + .toggle-slider {
+  background: linear-gradient(135deg, var(--accent-primary) 0%, #f97316 100%);
+}
+
+.toggle-option input:checked + .toggle-slider::after {
+  background: white;
+  transform: translateX(18px);
+}
+
+.toggle-label {
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+/* =============== Recording Controls =============== */
+.recording-controls {
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+}
+
+.recording-controls.hidden {
+  display: none;
+}
+
+.control-btn {
+  width: 48px;
+  height: 48px;
+  border: none;
+  border-radius: 50%;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all var(--transition-fast);
+}
+
+.pause-btn {
+  background: var(--bg-tertiary);
+  color: var(--text-primary);
+  border: 2px solid var(--border-color);
+}
+
+.pause-btn:hover {
+  background: var(--bg-hover);
+  border-color: var(--warning);
+  color: var(--warning);
+}
+
+.resume-btn {
+  background: var(--success);
+  color: white;
+}
+
+.resume-btn:hover {
+  background: #16a34a;
+  transform: scale(1.05);
+}
+
+.resume-btn.hidden,
+.pause-btn.hidden {
+  display: none;
+}
+
+/* =============== Action Button =============== */
+.action-container {
+  margin-top: 4px;
+}
+
+.action-btn {
+  width: 100%;
+  padding: 14px 24px;
+  background: linear-gradient(135deg, var(--accent-primary) 0%, #f97316 100%);
+  border: none;
+  border-radius: var(--border-radius);
+  color: white;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all var(--transition-normal);
+  box-shadow: var(--shadow-md), var(--shadow-glow);
+}
+
+.action-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-lg), 0 0 40px var(--accent-glow);
+}
+
+.action-btn:active {
+  transform: translateY(0);
+}
+
+.action-btn.recording {
+  background: linear-gradient(135deg, #dc2626 0%, var(--accent-primary) 100%);
+  animation: recording-pulse 2s ease-in-out infinite;
+}
+
+@keyframes recording-pulse {
+  0%,
+  100% {
+    box-shadow: var(--shadow-md), 0 0 20px var(--accent-glow);
+  }
+  50% {
+    box-shadow: var(--shadow-lg), 0 0 40px var(--accent-glow);
+  }
+}
+
+.action-btn-content {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+}
+
+.record-icon {
+  transition: all var(--transition-fast);
+}
+
+.action-btn.recording .record-icon {
+  animation: none;
+}
+
+/* =============== Shortcut Hint =============== */
+.shortcut-hint {
+  text-align: center;
+  font-size: 11px;
+  color: var(--text-muted);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+}
+
+kbd {
+  display: inline-block;
+  padding: 2px 6px;
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  font-family: "SF Mono", "Consolas", monospace;
+  font-size: 10px;
+  color: var(--text-secondary);
+}
+
+/* =============== Hidden Utility =============== */
+.hidden {
+  display: none !important;
+}
+
+/* =============== Scrollbar =============== */
+::-webkit-scrollbar {
+  width: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--bg-secondary);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--bg-hover);
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--text-muted);
+}

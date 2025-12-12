@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <title>FFmpeg Sandbox</title>
+  </head>
+  <body>
+    <!-- 
+    Página sandbox para executar FFmpeg.wasm
+    Esta página roda em um contexto isolado com CSP permissivo 
+    que permite 'unsafe-eval' necessário para o FFmpeg.wasm
+  -->
+    <script src="https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.12.10/dist/umd/ffmpeg.min.js"></script>
+    <script>
+      // Estado do FFmpeg
+      let ffmpeg = null;
+      let loaded = false;
+
+      // Escuta mensagens do parent (offscreen.js)
+      window.addEventListener("message", async (event) => {
+        const { type, id, data } = event.data;
+
+        try {
+          let result;
+
+          switch (type) {
+            case "INIT":
+              result = await initFFmpeg();
+              break;
+
+            case "CONVERT":
+              result = await convertToMP4(data.webmData, data.fps);
+              break;
+
+            case "TERMINATE":
+              result = terminateFFmpeg();
+              break;
+
+            default:
+              throw new Error(`Tipo desconhecido: ${type}`);
+          }
+
+          // Envia resposta de sucesso
+          parent.postMessage({ id, success: true, result }, "*");
+        } catch (error) {
+          // Envia resposta de erro
+          parent.postMessage(
+            {
+              id,
+              success: false,
+              error: error.message,
+            },
+            "*"
+          );
+        }
+      });
+
+      // Inicializa FFmpeg
+      async function initFFmpeg() {
+        if (loaded && ffmpeg) {
+          console.log("[Sandbox] FFmpeg já carregado");
+          return { loaded: true };
+        }
+
+        console.log("[Sandbox] Inicializando FFmpeg...");
+
+        const { FFmpeg } = FFmpegWASM;
+        ffmpeg = new FFmpeg();
+
+        // Log de progresso
+        ffmpeg.on("log", ({ message }) => {
+          console.log("[FFmpeg]", message);
+        });
+
+        // Progresso
+        ffmpeg.on("progress", ({ progress }) => {
+          parent.postMessage(
+            {
+              type: "PROGRESS",
+              progress: Math.round((progress || 0) * 100),
+            },
+            "*"
+          );
+        });
+
+        console.log("[Sandbox] Carregando core (~31MB)...");
+
+        // Carrega o core do FFmpeg
+        const baseURL =
+          "https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.10/dist/umd";
+        await ffmpeg.load({
+          coreURL: `${baseURL}/ffmpeg-core.js`,
+          wasmURL: `${baseURL}/ffmpeg-core.wasm`,
+        });
+
+        loaded = true;
+        console.log("[Sandbox] FFmpeg carregado!");
+        return { loaded: true };
+      }
+
+      // Converte WebM para MP4
+      async function convertToMP4(webmData, fps) {
+        if (!loaded || !ffmpeg) {
+          await initFFmpeg();
+        }
+
+        console.log("[Sandbox] Iniciando conversão...");
+        console.log(`[Sandbox] Dados: ${webmData.length} bytes, FPS: ${fps}`);
+
+        // Escreve arquivo de entrada
+        await ffmpeg.writeFile("input.webm", new Uint8Array(webmData));
+
+        // Executa conversão
+        await ffmpeg.exec([
+          "-i",
+          "input.webm",
+          "-r",
+          fps.toString(),
+          "-c:v",
+          "libx264",
+          "-preset",
+          "medium",
+          "-crf",
+          "18",
+          "-profile:v",
+          "high",
+          "-level",
+          "4.2",
+          "-c:a",
+          "aac",
+          "-b:a",
+          "192k",
+          "-ar",
+          "48000",
+          "-movflags",
+          "+faststart",
+          "-pix_fmt",
+          "yuv420p",
+          "-vsync",
+          "cfr",
+          "output.mp4",
+        ]);
+
+        console.log("[Sandbox] Lendo arquivo de saída...");
+
+        // Lê arquivo de saída
+        const mp4Data = await ffmpeg.readFile("output.mp4");
+
+        // Limpa arquivos
+        try {
+          await ffmpeg.deleteFile("input.webm");
+          await ffmpeg.deleteFile("output.mp4");
+        } catch (e) {}
+
+        console.log("[Sandbox] Conversão concluída!");
+
+        // Retorna como array (será reconstruído como Blob no parent)
+        return { mp4Data: Array.from(mp4Data) };
+      }
+
+      // Termina FFmpeg
+      function terminateFFmpeg() {
+        if (ffmpeg) {
+          try {
+            ffmpeg.terminate();
+          } catch (e) {}
+          ffmpeg = null;
+          loaded = false;
+        }
+        return { terminated: true };
+      }
+
+      // Notifica que o sandbox está pronto
+      parent.postMessage({ type: "READY" }, "*");
+      console.log("[Sandbox] Pronto!");
+    </script>
+  </body>
+</html>

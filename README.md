@@ -1,122 +1,82 @@
-# 🎬 Gravador de Tela Pro
+# Gravador de Tela Pro
 
-Extensão Chrome Manifest V3 para gravação de tela, aba ou janela em alta qualidade (até 4K).
+![CSS](https://img.shields.io/badge/CSS-663399?style=flat&logo=css&logoColor=white)&nbsp;&nbsp; ![HTML](https://img.shields.io/badge/HTML-E34F26?style=flat&logo=html5&logoColor=white)&nbsp;&nbsp; ![JavaScript](https://img.shields.io/badge/JavaScript-F7DF1E?style=flat&logo=javascript&logoColor=white)&nbsp;&nbsp; ![JSON](https://img.shields.io/badge/JSON-000000?style=flat&logo=json&logoColor=white)&nbsp;&nbsp; ![Markdown](https://img.shields.io/badge/Markdown-000000?style=flat&logo=markdown&logoColor=white)
 
-## ✨ Recursos
+![Interface da Extensão](public/popup.png)
 
-- **Qualidade até 4K**: Suporte para 720p, 1080p, 1440p e 4K Ultra HD
-- **FPS Configurável**: 30 ou 60 FPS para gravações suaves
-- **Captura de Áudio**: Grava áudio da aba/tela + microfone com volumes separados
-- **100% Local**: Nenhum dado é enviado para servidores - tudo roda no seu navegador
-- **Atalhos Globais**: Inicie/pare gravações sem abrir o popup
-- **UI Moderna**: Interface minimalista com tema escuro
-- **Badge de Tempo**: Veja o tempo de gravação diretamente no ícone
+Extensão para Google Chrome desenvolvida em Manifest V3 para captura de tela, janelas ou abas. Realiza todo o processamento de mídia localmente utilizando a API `MediaRecorder` e Documentos Offscreen, suportando resoluções até 4K e mixagem de áudio (sistema e microfone).
 
-## 🚀 Instalação
+## Funcionalidades
 
-### Via Modo Desenvolvedor (Recomendado para teste)
+- **Captura de Vídeo**: Suporte a resoluções 720p, 1080p, 1440p e 4K.
+- **Taxa de Quadros**: Configurável entre 30 FPS e 60 FPS.
+- **Codecs**: Suporte a VP9, VP8 e H.264 (conforme disponibilidade do navegador).
+- **Mixagem de Áudio**: Utiliza `AudioContext` para combinar áudio da aba/sistema com o microfone, com controle de volume independente.
+- **Processamento Local**: Gera arquivos `.webm` (Blobs) diretamente no cliente, sem envio de dados para servidores externos.
+- **Feedback Visual**: Badge no ícone indicando tempo de gravação ou estado de pausa.
 
-1. Clone ou baixe este repositório
-2. Abra o Chrome e acesse `chrome://extensions/`
-3. Ative o **Modo Desenvolvedor** (toggle no canto superior direito)
-4. Clique em **Carregar sem compactação**
-<<<<<<< HEAD
-5. Selecione a pasta `gravador-de-tela`...
-=======
-5. Selecione a pasta `gravador-de-tela`
->>>>>>> ca7cf32 (v1)
+## Requisitos
 
-### Atalhos de Teclado
+- Navegador baseado em Chromium (Google Chrome, Edge, Brave, etc).
+- **Versão Mínima**: Chrome 116 (conforme definido em `manifest.json`).
 
-| Atalho            | Ação                   |
-| ----------------- | ---------------------- |
-| `Alt + Shift + R` | Abrir popup            |
-| `Alt + Shift + S` | Iniciar/Parar gravação |
+## Instalação
 
-Para personalizar os atalhos, acesse `chrome://extensions/shortcuts`
+Como o projeto não possui um empacotador (`package.json`), a instalação é feita via carregamento direto da fonte:
 
-## 📁 Estrutura do Projeto
+1. Clone este repositório.
+2. Abra o navegador e acesse `chrome://extensions`.
+3. Ative o **Modo do desenvolvedor** no canto superior direito.
+4. Clique no botão **Carregar sem compactação** (Load unpacked).
+5. Selecione a pasta raiz do projeto clonado.
+
+## Uso
+
+### Interface Gráfica
+Clique no ícone da extensão na barra de ferramentas ou utilize o atalho configurado para abrir o popup de controle.
+
+### Atalhos de Teclado (Padrão)
+Os atalhos são definidos no `manifest.json` e podem ser alterados em `chrome://extensions/shortcuts`.
+
+- `Alt + Shift + R`: Abrir popup da extensão.
+- `Alt + Shift + S`: Iniciar ou Parar a gravação (toggle).
+
+### Configurações
+Acesse a página de opções (botão de engrenagem no popup) para ajustar:
+- Qualidade padrão e FPS.
+- Codec preferencial.
+- Fontes de áudio e volumes.
+- Contagem regressiva e salvamento automático.
+- Padrão de nomenclatura do arquivo (ex: `gravacao_{date}_{time}`).
+  
+![Configuração da Extensão](public/config.png)
+
+## Estrutura do Projeto
 
 ```
-gravador-de-tela/
-├── manifest.json          # Configuração da extensão
-├── background.js          # Service Worker principal
-├── icons/                 # Ícones da extensão
-│   ├── icon16.png
-│   ├── icon48.png
-│   ├── icon128.png
-│   ├── recording16.png
-│   ├── recording48.png
-│   └── recording128.png
-├── offscreen/             # Documento offscreen para gravação
+/
+├── background.js          # Service Worker: Gerencia estado global, timer e badge
+├── manifest.json          # Definições da extensão (Permissões, Versão, Assets)
+├── icons/                 # Ícones da aplicação e estados de gravação
+├── offscreen/             # Contexto para acesso ao DOM e MediaRecorder API
 │   ├── offscreen.html
-│   └── offscreen.js
-├── popup/                 # Interface do popup
-│   ├── popup.html
-│   ├── popup.css
-│   └── popup.js
-├── options/               # Página de configurações
+│   └── offscreen.js       # Lógica de captura, mixagem de áudio e Blob
+├── options/               # Página de configurações completas
 │   ├── options.html
 │   ├── options.css
 │   └── options.js
-└── utils/                 # Utilitários compartilhados
-    └── constants.js
+├── popup/                 # Interface rápida de controle
+│   ├── popup.html
+│   ├── popup.css
+│   └── popup.js
+├── public/                # Assets estáticos para documentação
+└── utils/                 # Constantes e funções utilitárias compartilhadas
 ```
 
-## ⚙️ Configurações
+## FAQ Técnico
 
-Acesse as configurações clicando no ícone de engrenagem no popup ou navegando até:
-`chrome://extensions` → Gravador de Tela Pro → Detalhes → Opções da extensão
+### Por que utilizar Documentos Offscreen?
+O Manifest V3 substituiu as *background pages* por *Service Workers*, que não possuem acesso ao DOM nem às APIs de mídia (`MediaRecorder`, `AudioContext`). O projeto utiliza `chrome.offscreen` (`offscreen/offscreen.html`) para criar um ambiente oculto onde a captura e processamento do stream ocorrem.
 
-### Opções Disponíveis
-
-- **Qualidade de Vídeo**: 720p até 4K
-- **Taxa de Quadros**: 30 ou 60 FPS
-- **Codec**: VP9, VP8 ou H.264
-- **Captura de Áudio**: Sistema e/ou Microfone
-- **Volumes Separados**: Controle independente para sistema e microfone
-- **Contagem Regressiva**: 3, 5 ou 10 segundos antes de iniciar
-- **Padrão de Nome**: Personalize o nome dos arquivos salvos
-
-## 🔒 Privacidade
-
-Esta extensão foi desenvolvida com privacidade em mente:
-
-- ✅ **Sem coleta de dados**: Nenhuma informação é coletada ou transmitida
-- ✅ **Processamento local**: Toda gravação ocorre localmente no navegador
-- ✅ **Sem analytics**: Nenhum código de rastreamento incluído
-- ✅ **Armazenamento local**: Configurações salvas apenas no seu navegador
-- ✅ **Código aberto**: Todo o código é transparente e auditável
-
-## 📝 Tecnologias
-
-- **Manifest V3**: Última versão do formato de extensões Chrome
-- **getDisplayMedia API**: Captura de tela nativa do navegador
-- **MediaRecorder API**: Gravação de streams de mídia
-- **AudioContext**: Mixagem de múltiplas fontes de áudio
-- **Offscreen Documents**: Gravação em background sem UI
-
-## 🐛 Solução de Problemas
-
-### A gravação não inicia
-
-- Verifique se você concedeu permissão para compartilhar a tela
-- Certifique-se de que nenhuma outra extensão está usando a câmera/microfone
-
-### Áudio não está sendo gravado
-
-- Para áudio da aba, certifique-se de marcar "Compartilhar áudio da aba" no diálogo de compartilhamento
-- Para microfone, conceda a permissão quando solicitado
-
-### O arquivo está corrompido
-
-- Não feche o navegador abruptamente durante a gravação
-- Certifique-se de clicar em "Parar" antes de fechar
-
-## 📄 Licença
-
-MIT License - Livre para uso pessoal e comercial.
-
----
-
-Desenvolvido com ❤️
+### Como funciona a mixagem de áudio?
+Em `offscreen.js`, quando ambas as fontes (sistema e microfone) estão ativas, a extensão cria um `AudioContext`. Os streams de áudio são convertidos em nós de mídia (`createMediaStreamSource`), passam por nós de ganho (`GainNode`) para controle de volume e são mesclados em um único destino (`createMediaStreamDestination`) antes de serem anexados ao `MediaRecorder`.

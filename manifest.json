@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "Gravador de Tela Pro",
   "short_name": "ScreenRec",
-  "version": "1.1.1",
+  "version": "1.2.0",
   "description": "Grave sua tela, aba ou janela em até 4K. Exporte em WebM ou MP4 (compatível com DaVinci Resolve). 100% local.",
 
   "icons": {
@@ -39,12 +39,19 @@
 
   "content_security_policy": {
     "extension_pages": "script-src 'self' 'wasm-unsafe-eval'; object-src 'self'",
-    "sandbox": "sandbox allow-scripts allow-forms; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.jsdelivr.net; object-src 'self'"
+    "sandbox": "sandbox allow-scripts allow-forms; script-src 'self' 'unsafe-inline' 'unsafe-eval' 'wasm-unsafe-eval'; object-src 'self'"
   },
 
   "sandbox": {
     "pages": ["offscreen/ffmpeg-sandbox.html"]
   },
+
+  "web_accessible_resources": [
+    {
+      "resources": ["ffmpeg-core/*"],
+      "matches": ["<all_urls>"]
+    }
+  ],
 
   "commands": {
     "_execute_action": {

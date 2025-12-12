@@ -7,10 +7,9 @@
   <body>
     <!-- 
     Página sandbox para executar FFmpeg.wasm
-    Esta página roda em um contexto isolado com CSP permissivo 
-    que permite 'unsafe-eval' necessário para o FFmpeg.wasm
+    Usa arquivos locais para evitar problemas de CSP
   -->
-    <script src="https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.12.10/dist/umd/ffmpeg.min.js"></script>
+    <script src="../ffmpeg-core/ffmpeg.min.js"></script>
     <script>
       // Estado do FFmpeg
       let ffmpeg = null;
@@ -43,12 +42,13 @@
           // Envia resposta de sucesso
           parent.postMessage({ id, success: true, result }, "*");
         } catch (error) {
+          console.error("[Sandbox] Erro:", error);
           // Envia resposta de erro
           parent.postMessage(
             {
               id,
               success: false,
-              error: error.message,
+              error: error.message || String(error),
             },
             "*"
           );
@@ -64,6 +64,11 @@
 
         console.log("[Sandbox] Inicializando FFmpeg...");
 
+        // Verifica se FFmpegWASM está disponível
+        if (typeof FFmpegWASM === "undefined") {
+          throw new Error("FFmpegWASM não está carregado");
+        }
+
         const { FFmpeg } = FFmpegWASM;
         ffmpeg = new FFmpeg();
 
@@ -74,33 +79,44 @@
 
         // Progresso
         ffmpeg.on("progress", ({ progress }) => {
+          const percent = Math.round((progress || 0) * 100);
+          console.log("[FFmpeg] Progresso:", percent + "%");
           parent.postMessage(
             {
               type: "PROGRESS",
-              progress: Math.round((progress || 0) * 100),
+              progress: percent,
             },
             "*"
           );
         });
 
-        console.log("[Sandbox] Carregando core (~31MB)...");
+        console.log("[Sandbox] Carregando core local...");
 
-        // Carrega o core do FFmpeg
-        const baseURL =
-          "https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.10/dist/umd";
-        await ffmpeg.load({
-          coreURL: `${baseURL}/ffmpeg-core.js`,
-          wasmURL: `${baseURL}/ffmpeg-core.wasm`,
-        });
+        // Carrega o core do FFmpeg a partir dos arquivos locais
+        // Usa chrome.runtime.getURL para obter o caminho correto
+        const baseURL = "../ffmpeg-core";
+
+        try {
+          await ffmpeg.load({
+            coreURL: `${baseURL}/ffmpeg-core.js`,
+            wasmURL: `${baseURL}/ffmpeg-core.wasm`,
+          });
+        } catch (loadError) {
+          console.error("[Sandbox] Erro ao carregar core:", loadError);
+          throw new Error(
+            "Falha ao carregar FFmpeg core: " + loadError.message
+          );
+        }
 
         loaded = true;
-        console.log("[Sandbox] FFmpeg carregado!");
+        console.log("[Sandbox] FFmpeg carregado com sucesso!");
         return { loaded: true };
       }
 
       // Converte WebM para MP4
       async function convertToMP4(webmData, fps) {
         if (!loaded || !ffmpeg) {
+          console.log("[Sandbox] FFmpeg não carregado, inicializando...");
           await initFFmpeg();
         }
 
@@ -108,14 +124,17 @@
         console.log(`[Sandbox] Dados: ${webmData.length} bytes, FPS: ${fps}`);
 
         // Escreve arquivo de entrada
-        await ffmpeg.writeFile("input.webm", new Uint8Array(webmData));
+        const inputData = new Uint8Array(webmData);
+        await ffmpeg.writeFile("input.webm", inputData);
+        console.log("[Sandbox] Arquivo de entrada escrito");
 
         // Executa conversão
+        console.log("[Sandbox] Executando ffmpeg...");
         await ffmpeg.exec([
           "-i",
           "input.webm",
           "-r",
-          fps.toString(),
+          String(fps),
           "-c:v",
           "libx264",
           "-preset",
@@ -145,12 +164,15 @@
 
         // Lê arquivo de saída
         const mp4Data = await ffmpeg.readFile("output.mp4");
+        console.log(`[Sandbox] MP4 gerado: ${mp4Data.length} bytes`);
 
         // Limpa arquivos
         try {
           await ffmpeg.deleteFile("input.webm");
           await ffmpeg.deleteFile("output.mp4");
-        } catch (e) {}
+        } catch (e) {
+          console.warn("[Sandbox] Erro ao limpar arquivos:", e);
+        }
 
         console.log("[Sandbox] Conversão concluída!");
 
@@ -171,8 +193,8 @@
       }
 
       // Notifica que o sandbox está pronto
+      console.log("[Sandbox] Inicializado!");
       parent.postMessage({ type: "READY" }, "*");
-      console.log("[Sandbox] Pronto!");
     </script>
   </body>
 </html>

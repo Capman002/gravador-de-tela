@@ -32,10 +32,10 @@ export const OUTPUT_FORMATS = {
 };
 
 export const DEFAULT_SETTINGS = {
-  quality: "1080p",
-  fps: 30,
-  codec: "vp9",
-  outputFormat: "webm", // Novo: formato de saída
+  quality: "4k",
+  fps: 60,
+  codec: "h264",
+  outputFormat: "mp4",
   captureAudio: true,
   captureMic: false,
   micVolume: 100,

@@ -1,53 +1,33 @@
 // FFmpeg Converter - Converte WebM para MP4 usando FFmpeg.wasm
 // Isso garante compatibilidade com editores como DaVinci Resolve
 
-// URLs do FFmpeg.wasm CDN (versão 0.12.10)
-const FFMPEG_CORE_URL =
-  "https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.10/dist/umd/ffmpeg-core.js";
-const FFMPEG_WASM_URL =
-  "https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.10/dist/umd/ffmpeg-core.wasm";
-
 let ffmpegInstance = null;
 let ffmpegLoaded = false;
 let isLoading = false;
+let FFmpegModule = null;
+let FFmpegUtilModule = null;
 
-// Importa FFmpeg dinamicamente
-async function importFFmpeg() {
-  if (window.FFmpeg) return window.FFmpeg;
+// URLs do FFmpeg.wasm CDN (versão 0.12.10)
+const FFMPEG_CDN_BASE = "https://cdn.jsdelivr.net/npm/@ffmpeg";
+const FFMPEG_VERSION = "0.12.10";
+const CORE_VERSION = "0.12.10";
+const UTIL_VERSION = "0.12.1";
 
-  // Carrega o módulo FFmpeg via script tag
+// Carrega script dinamicamente
+function loadScript(url) {
   return new Promise((resolve, reject) => {
-    const script = document.createElement("script");
-    script.src =
-      "https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.12.10/dist/umd/ffmpeg.min.js";
-    script.onload = () => {
-      if (window.FFmpegWASM) {
-        resolve(window.FFmpegWASM);
-      } else {
-        reject(new Error("FFmpeg não carregou corretamente"));
-      }
-    };
-    script.onerror = () => reject(new Error("Falha ao carregar FFmpeg"));
-    document.head.appendChild(script);
-  });
-}
+    // Verifica se já foi carregado
+    const existing = document.querySelector(`script[src="${url}"]`);
+    if (existing) {
+      resolve();
+      return;
+    }
 
-// Importa FFmpeg util
-async function importFFmpegUtil() {
-  if (window.FFmpegUtil) return window.FFmpegUtil;
-
-  return new Promise((resolve, reject) => {
     const script = document.createElement("script");
-    script.src =
-      "https://cdn.jsdelivr.net/npm/@ffmpeg/util@0.12.1/dist/umd/index.js";
-    script.onload = () => {
-      if (window.FFmpegUtil) {
-        resolve(window.FFmpegUtil);
-      } else {
-        reject(new Error("FFmpeg Util não carregou corretamente"));
-      }
-    };
-    script.onerror = () => reject(new Error("Falha ao carregar FFmpeg Util"));
+    script.src = url;
+    script.async = true;
+    script.onload = resolve;
+    script.onerror = () => reject(new Error(`Falha ao carregar: ${url}`));
     document.head.appendChild(script);
   });
 }
@@ -63,17 +43,36 @@ export async function initFFmpeg(onProgress) {
     while (isLoading) {
       await new Promise((resolve) => setTimeout(resolve, 100));
     }
-    return ffmpegInstance;
+    if (ffmpegInstance) return ffmpegInstance;
   }
 
   isLoading = true;
 
   try {
-    // Importa os módulos
-    const FFmpegModule = await importFFmpeg();
-    const FFmpegUtil = await importFFmpegUtil();
+    console.log("[FFmpeg] Carregando módulos...");
 
-    const { FFmpeg } = FFmpegModule;
+    // Carrega os scripts do CDN
+    await loadScript(
+      `${FFMPEG_CDN_BASE}/ffmpeg@${FFMPEG_VERSION}/dist/umd/ffmpeg.min.js`
+    );
+    await loadScript(
+      `${FFMPEG_CDN_BASE}/util@${UTIL_VERSION}/dist/umd/index.min.js`
+    );
+
+    // Acessa os módulos globais
+    // O ffmpeg.wasm UMD expõe como FFmpegWASM ou FFmpeg
+    const FFmpegLib = window.FFmpegWASM || window.FFmpeg;
+    const FFmpegUtil = window.FFmpegUtil;
+
+    if (!FFmpegLib || !FFmpegLib.FFmpeg) {
+      throw new Error("FFmpeg não foi carregado corretamente");
+    }
+
+    if (!FFmpegUtil || !FFmpegUtil.toBlobURL) {
+      throw new Error("FFmpeg Util não foi carregado corretamente");
+    }
+
+    const { FFmpeg } = FFmpegLib;
     const { toBlobURL } = FFmpegUtil;
 
     ffmpegInstance = new FFmpeg();
@@ -85,22 +84,31 @@ export async function initFFmpeg(onProgress) {
 
     // Progresso da conversão
     ffmpegInstance.on("progress", ({ progress, time }) => {
+      const percent = Math.round((progress || 0) * 100);
+      console.log(`[FFmpeg] Progresso: ${percent}%`);
       if (onProgress) {
-        onProgress(Math.round(progress * 100), time);
+        onProgress(percent, time);
       }
     });
 
-    // Carrega o core do FFmpeg usando toBlobURL para evitar problemas de CORS
+    console.log("[FFmpeg] Baixando core WebAssembly (~31MB)...");
+
+    // Carrega o core do FFmpeg
+    const coreURL = `${FFMPEG_CDN_BASE}/core@${CORE_VERSION}/dist/umd/ffmpeg-core.js`;
+    const wasmURL = `${FFMPEG_CDN_BASE}/core@${CORE_VERSION}/dist/umd/ffmpeg-core.wasm`;
+
     await ffmpegInstance.load({
-      coreURL: await toBlobURL(FFMPEG_CORE_URL, "text/javascript"),
-      wasmURL: await toBlobURL(FFMPEG_WASM_URL, "application/wasm"),
+      coreURL: await toBlobURL(coreURL, "text/javascript"),
+      wasmURL: await toBlobURL(wasmURL, "application/wasm"),
     });
 
     ffmpegLoaded = true;
-    console.log("FFmpeg carregado com sucesso!");
+    console.log("[FFmpeg] Carregado com sucesso!");
     return ffmpegInstance;
   } catch (error) {
-    console.error("Erro ao carregar FFmpeg:", error);
+    console.error("[FFmpeg] Erro ao carregar:", error);
+    ffmpegInstance = null;
+    ffmpegLoaded = false;
     throw error;
   } finally {
     isLoading = false;
@@ -109,9 +117,15 @@ export async function initFFmpeg(onProgress) {
 
 // Converte WebM para MP4
 export async function convertToMP4(webmBlob, options = {}, onProgress) {
-  const { fps = 30 } = options;
+  const { fps = 60 } = options;
 
   try {
+    console.log("[FFmpeg] Iniciando conversão WebM → MP4...");
+    console.log(
+      `[FFmpeg] Tamanho entrada: ${(webmBlob.size / 1024 / 1024).toFixed(2)} MB`
+    );
+    console.log(`[FFmpeg] FPS alvo: ${fps}`);
+
     // Garante que FFmpeg está inicializado
     const ffmpeg = await initFFmpeg(onProgress);
 
@@ -121,17 +135,17 @@ export async function convertToMP4(webmBlob, options = {}, onProgress) {
     // Escreve o arquivo de entrada no sistema de arquivos virtual
     await ffmpeg.writeFile("input.webm", webmData);
 
-    console.log("Iniciando conversão WebM -> MP4...");
-    console.log(`Configurações: FPS=${fps}`);
+    console.log("[FFmpeg] Executando conversão...");
 
-    // Executa a conversão
-    // -r: Define taxa de quadros constante (CFR)
+    // Executa a conversão com parâmetros otimizados para DaVinci Resolve
+    // -r: Define taxa de quadros de SAÍDA (CFR)
     // -c:v libx264: Codec de vídeo H.264
-    // -preset fast: Balanço entre velocidade e qualidade
-    // -crf 23: Qualidade (18-28 é bom, menor = melhor)
+    // -preset medium: Balanço entre velocidade e qualidade
+    // -crf 18: Alta qualidade (menor = melhor, 18-23 é bom)
     // -c:a aac: Codec de áudio AAC
-    // -b:a 128k: Bitrate de áudio
-    // -movflags +faststart: Otimiza para streaming/reprodução
+    // -b:a 192k: Bitrate de áudio
+    // -movflags +faststart: Otimiza para reprodução
+    // -pix_fmt yuv420p: Formato de pixel compatível
     // -vsync cfr: Força taxa de quadros constante
     await ffmpeg.exec([
       "-i",
@@ -141,42 +155,51 @@ export async function convertToMP4(webmBlob, options = {}, onProgress) {
       "-c:v",
       "libx264",
       "-preset",
-      "fast",
+      "medium",
       "-crf",
-      "23",
+      "18",
+      "-profile:v",
+      "high",
+      "-level",
+      "4.2",
       "-c:a",
       "aac",
       "-b:a",
-      "128k",
+      "192k",
+      "-ar",
+      "48000",
       "-movflags",
       "+faststart",
+      "-pix_fmt",
+      "yuv420p",
       "-vsync",
       "cfr",
-      "-pix_fmt",
-      "yuv420p", // Compatibilidade máxima
       "output.mp4",
     ]);
 
-    console.log("Conversão concluída!");
+    console.log("[FFmpeg] Conversão concluída!");
 
     // Lê o arquivo de saída
     const mp4Data = await ffmpeg.readFile("output.mp4");
 
     // Limpa arquivos temporários
-    await ffmpeg.deleteFile("input.webm");
-    await ffmpeg.deleteFile("output.mp4");
+    try {
+      await ffmpeg.deleteFile("input.webm");
+      await ffmpeg.deleteFile("output.mp4");
+    } catch (e) {
+      // Ignora erros de limpeza
+    }
 
     // Cria blob do MP4
     const mp4Blob = new Blob([mp4Data.buffer], { type: "video/mp4" });
 
     console.log(
-      `Tamanho original: ${(webmBlob.size / 1024 / 1024).toFixed(2)} MB`
+      `[FFmpeg] Tamanho MP4: ${(mp4Blob.size / 1024 / 1024).toFixed(2)} MB`
     );
-    console.log(`Tamanho MP4: ${(mp4Blob.size / 1024 / 1024).toFixed(2)} MB`);
 
     return mp4Blob;
   } catch (error) {
-    console.error("Erro na conversão:", error);
+    console.error("[FFmpeg] Erro na conversão:", error);
     throw error;
   }
 }
@@ -191,6 +214,7 @@ export async function terminateFFmpeg() {
   if (ffmpegInstance) {
     try {
       ffmpegInstance.terminate();
+      console.log("[FFmpeg] Terminado");
     } catch (e) {
       // Ignora erros de término
     }

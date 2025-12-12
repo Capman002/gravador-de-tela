@@ -276,7 +276,7 @@ async function handleRecordingStop(options = {}) {
       try {
         finalBlob = await convertToMP4(
           webmBlob,
-          { fps: recordingOpts.fps || 30 },
+          { fps: recordingOpts.fps || 60 },
           (progress, time) => {
             // Callback de progresso
             chrome.runtime

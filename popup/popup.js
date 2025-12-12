@@ -76,7 +76,7 @@ async function loadState() {
       }
 
       // Restaura FPS selecionado
-      updateFpsSelection(currentState.settings.fps || 30);
+      updateFpsSelection(currentState.settings.fps || 60);
     }
   } catch (error) {
     console.error("Erro ao carregar estado:", error);
@@ -240,7 +240,7 @@ function updateFpsSelection(fps) {
 async function updateSettings() {
   const settings = {
     quality: elements.qualitySelect.value,
-    fps: currentState.settings.fps || 30,
+    fps: currentState.settings.fps || 60,
     captureAudio: elements.captureAudio.checked,
     captureMic: elements.captureMic.checked,
   };

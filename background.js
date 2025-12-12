@@ -4,6 +4,7 @@ import {
   DEFAULT_SETTINGS,
   RECORDING_STATE,
   MESSAGE_TYPES,
+  OUTPUT_FORMATS,
   formatTime,
   generateFilename,
 } from "./utils/constants.js";
@@ -319,8 +320,12 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
       case MESSAGE_TYPES.RECORDING_STOPPED:
         // Notificação do offscreen que a gravação terminou
-        if (message.blob) {
-          await saveRecording(message.blob);
+        if (message.converting) {
+          // Está convertendo, aguarda conclusão
+          console.log("Convertendo vídeo para MP4...");
+        } else if (message.blob) {
+          // Gravação/conversão concluída, salva arquivo
+          await saveRecording(message.blob, message.extension);
         }
         break;
 
@@ -353,8 +358,13 @@ chrome.commands.onCommand.addListener(async (command) => {
 
 // ============ FILE SAVING ============
 
-async function saveRecording(blobUrl) {
-  const filename = generateFilename(state.settings.filenamePattern);
+async function saveRecording(blobUrl, extension) {
+  // Usa a extensão recebida ou obtém do formato configurado
+  const ext =
+    extension ||
+    OUTPUT_FORMATS[state.settings.outputFormat]?.extension ||
+    ".webm";
+  const filename = generateFilename(state.settings.filenamePattern, ext);
 
   try {
     await chrome.downloads.download({

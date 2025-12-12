@@ -4,7 +4,10 @@ import {
   QUALITY_PRESETS,
   CODEC_OPTIONS,
   MESSAGE_TYPES,
+  OUTPUT_FORMATS,
 } from "../utils/constants.js";
+
+import { convertToMP4, terminateFFmpeg } from "./ffmpeg-converter.js";
 
 let mediaRecorder = null;
 let recordedChunks = [];
@@ -12,6 +15,7 @@ let displayStream = null;
 let micStream = null;
 let combinedStream = null;
 let audioContext = null;
+let currentRecordingOptions = null; // Armazena opções da gravação atual
 
 // ============ STREAM MANAGEMENT ============
 
@@ -19,11 +23,22 @@ async function getDisplayMediaStream(options) {
   const qualityPreset =
     QUALITY_PRESETS[options.quality] || QUALITY_PRESETS["1080p"];
 
+  // Mapeia a fonte selecionada para displaySurface
+  // monitor = tela inteira, window = janela, browser = aba do navegador
+  const surfaceMap = {
+    screen: "monitor",
+    window: "window",
+    tab: "browser",
+  };
+
+  const displaySurface = surfaceMap[options.source] || "monitor";
+
   const constraints = {
     video: {
       width: { ideal: qualityPreset.width, max: qualityPreset.width },
       height: { ideal: qualityPreset.height, max: qualityPreset.height },
       frameRate: { ideal: options.fps || 30, max: 60 },
+      displaySurface: displaySurface, // Pré-seleciona a aba no picker
     },
     audio: options.captureAudio
       ? {
@@ -34,6 +49,8 @@ async function getDisplayMediaStream(options) {
           channelCount: 2,
         }
       : false,
+    // preferCurrentTab faz a aba atual aparecer primeiro quando source = tab
+    preferCurrentTab: options.source === "tab",
   };
 
   try {
@@ -127,6 +144,7 @@ function combineAudioStreams(displayStream, micStream, options) {
 async function startRecording(options) {
   try {
     recordedChunks = [];
+    currentRecordingOptions = options; // Armazena para usar na conversão
 
     // Obtém streams
     const display = await getDisplayMediaStream(options);
@@ -230,23 +248,79 @@ async function stopRecording() {
 
 async function handleRecordingStop(options = {}) {
   try {
-    // Cria blob do vídeo
-    const blob = new Blob(recordedChunks, { type: "video/webm" });
-    const blobUrl = URL.createObjectURL(blob);
+    // Usa opções passadas ou as armazenadas
+    const recordingOpts = options.outputFormat
+      ? options
+      : currentRecordingOptions || {};
 
-    // Limpa recursos
+    // Cria blob do vídeo WebM
+    const webmBlob = new Blob(recordedChunks, { type: "video/webm" });
+
+    // Limpa recursos de gravação
     cleanupStreams();
 
-    // Notifica background
+    let finalBlob = webmBlob;
+    let outputFormat = recordingOpts.outputFormat || "webm";
+
+    // Converte para MP4 se necessário
+    if (outputFormat === "mp4") {
+      console.log("Iniciando conversão para MP4...");
+
+      // Notifica background que está convertendo
+      chrome.runtime.sendMessage({
+        type: MESSAGE_TYPES.RECORDING_STOPPED,
+        converting: true,
+        originalSize: webmBlob.size,
+      });
+
+      try {
+        finalBlob = await convertToMP4(
+          webmBlob,
+          { fps: recordingOpts.fps || 30 },
+          (progress, time) => {
+            // Callback de progresso
+            chrome.runtime
+              .sendMessage({
+                type: "CONVERSION_PROGRESS",
+                progress,
+                time,
+              })
+              .catch(() => {});
+          }
+        );
+        console.log("Conversão para MP4 concluída!");
+
+        // Limpa FFmpeg após conversão
+        await terminateFFmpeg();
+      } catch (conversionError) {
+        console.error("Erro na conversão MP4:", conversionError);
+        // Fallback: salva como WebM
+        console.log("Salvando como WebM devido a erro na conversão...");
+        finalBlob = webmBlob;
+        outputFormat = "webm";
+      }
+    }
+
+    const blobUrl = URL.createObjectURL(finalBlob);
+    const formatInfo = OUTPUT_FORMATS[outputFormat];
+
+    // Notifica background com o resultado final
     chrome.runtime.sendMessage({
       type: MESSAGE_TYPES.RECORDING_STOPPED,
       blob: blobUrl,
-      size: blob.size,
+      size: finalBlob.size,
+      format: outputFormat,
+      extension: formatInfo.extension,
+      mimeType: formatInfo.mimeType,
     });
 
-    return { success: true, blobUrl };
+    // Limpa opções
+    currentRecordingOptions = null;
+
+    return { success: true, blobUrl, format: outputFormat };
   } catch (error) {
     console.error("Erro ao finalizar gravação:", error);
+    currentRecordingOptions = null;
     return { success: false, error: error.message };
   }
 }

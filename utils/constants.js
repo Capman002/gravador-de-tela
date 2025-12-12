@@ -15,10 +15,27 @@ export const CODEC_OPTIONS = {
   h264: { mimeType: "video/webm;codecs=h264", label: "H.264 (Hardware)" },
 };
 
+// Formatos de saída disponíveis
+export const OUTPUT_FORMATS = {
+  webm: {
+    extension: ".webm",
+    mimeType: "video/webm",
+    label: "WebM (Padrão)",
+    description: "Formato nativo, mais rápido",
+  },
+  mp4: {
+    extension: ".mp4",
+    mimeType: "video/mp4",
+    label: "MP4 (H.264)",
+    description: "Compatível com editores (DaVinci, Premiere)",
+  },
+};
+
 export const DEFAULT_SETTINGS = {
   quality: "1080p",
   fps: 30,
   codec: "vp9",
+  outputFormat: "webm", // Novo: formato de saída
   captureAudio: true,
   captureMic: false,
   micVolume: 100,
@@ -86,10 +103,10 @@ export function formatTime(seconds) {
 }
 
 // Função para gerar nome de arquivo
-export function generateFilename(pattern) {
+export function generateFilename(pattern, extension = ".webm") {
   const now = new Date();
   const date = now.toISOString().split("T")[0];
   const time = now.toTimeString().split(" ")[0].replace(/:/g, "-");
 
-  return pattern.replace("{date}", date).replace("{time}", time) + ".webm";
+  return pattern.replace("{date}", date).replace("{time}", time) + extension;
 }

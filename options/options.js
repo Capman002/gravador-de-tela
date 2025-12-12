@@ -8,6 +8,8 @@ const elements = {
   defaultQuality: document.getElementById("defaultQuality"),
   defaultFps: document.getElementById("defaultFps"),
   defaultCodec: document.getElementById("defaultCodec"),
+  outputFormat: document.getElementById("outputFormat"),
+  formatHint: document.getElementById("formatHint"),
 
   // Audio
   captureAudio: document.getElementById("captureAudio"),
@@ -49,6 +51,8 @@ async function loadSettings() {
   elements.defaultQuality.value = settings.quality;
   elements.defaultFps.value = settings.fps.toString();
   elements.defaultCodec.value = settings.codec;
+  elements.outputFormat.value = settings.outputFormat || "webm";
+  updateFormatHint(settings.outputFormat || "webm");
 
   // Audio
   elements.captureAudio.checked = settings.captureAudio;
@@ -65,6 +69,15 @@ async function loadSettings() {
   elements.filenamePattern.value = settings.filenamePattern;
 }
 
+// Atualiza dica do formato de saída
+function updateFormatHint(format) {
+  const hints = {
+    webm: "Formato nativo, gravação imediata",
+    mp4: "⚠️ Conversão após gravação (~31MB de download inicial)",
+  };
+  elements.formatHint.textContent = hints[format] || hints.webm;
+}
+
 // =============== Event Listeners ===============
 function setupEventListeners() {
   // Audio toggles affect volume visibility
@@ -73,6 +86,11 @@ function setupEventListeners() {
 
   // Countdown toggle affects seconds visibility
   elements.showCountdown.addEventListener("change", updateVisibility);
+
+  // Output format hint update
+  elements.outputFormat.addEventListener("change", () => {
+    updateFormatHint(elements.outputFormat.value);
+  });
 
   // Volume sliders update display
   elements.tabVolume.addEventListener("input", () => {
@@ -118,6 +136,7 @@ function getSettingsFromUI() {
     quality: elements.defaultQuality.value,
     fps: parseInt(elements.defaultFps.value),
     codec: elements.defaultCodec.value,
+    outputFormat: elements.outputFormat.value,
     captureAudio: elements.captureAudio.checked,
     captureMic: elements.captureMic.checked,
     tabVolume: parseInt(elements.tabVolume.value),

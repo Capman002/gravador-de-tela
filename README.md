@@ -11,8 +11,9 @@ Extensão para Google Chrome desenvolvida em Manifest V3 para captura de tela, j
 - **Captura de Vídeo**: Suporte a resoluções 720p, 1080p, 1440p e 4K.
 - **Taxa de Quadros**: Configurável entre 30 FPS e 60 FPS.
 - **Codecs**: Suporte a VP9, VP8 e H.264 (conforme disponibilidade do navegador).
+- **Exportação MP4**: Conversão para MP4 H.264 com taxa de quadros constante (CFR) para compatibilidade com editores como DaVinci Resolve e Premiere Pro.
 - **Mixagem de Áudio**: Utiliza `AudioContext` para combinar áudio da aba/sistema com o microfone, com controle de volume independente.
-- **Processamento Local**: Gera arquivos `.webm` (Blobs) diretamente no cliente, sem envio de dados para servidores externos.
+- **Processamento Local**: Gera arquivos `.webm` ou `.mp4` diretamente no cliente, sem envio de dados para servidores externos.
 - **Feedback Visual**: Badge no ícone indicando tempo de gravação ou estado de pausa.
 
 ## Requisitos
@@ -49,6 +50,7 @@ Acesse a página de opções (botão de engrenagem no popup) para ajustar:
 
 - Qualidade padrão e FPS.
 - Codec preferencial.
+- **Formato de saída** (WebM ou MP4).
 - Fontes de áudio e volumes.
 - Contagem regressiva e salvamento automático.
 - Padrão de nomenclatura do arquivo (ex: `gravacao_{date}_{time}`).
@@ -64,7 +66,8 @@ Acesse a página de opções (botão de engrenagem no popup) para ajustar:
 ├── icons/                 # Ícones da aplicação e estados de gravação
 ├── offscreen/             # Contexto para acesso ao DOM e MediaRecorder API
 │   ├── offscreen.html
-│   └── offscreen.js       # Lógica de captura, mixagem de áudio e Blob
+│   ├── offscreen.js       # Lógica de captura, mixagem de áudio e Blob
+│   └── ffmpeg-converter.js # Módulo de conversão WebM → MP4
 ├── options/               # Página de configurações completas
 │   ├── options.html
 │   ├── options.css
@@ -86,3 +89,14 @@ O Manifest V3 substituiu as _background pages_ por _Service Workers_, que não p
 ### Como funciona a mixagem de áudio?
 
 Em `offscreen.js`, quando ambas as fontes (sistema e microfone) estão ativas, a extensão cria um `AudioContext`. Os streams de áudio são convertidos em nós de mídia (`createMediaStreamSource`), passam por nós de ganho (`GainNode`) para controle de volume e são mesclados em um único destino (`createMediaStreamDestination`) antes de serem anexados ao `MediaRecorder`.
+
+### Como funciona a conversão para MP4?
+
+Quando o formato MP4 é selecionado, o vídeo é gravado normalmente em WebM e, ao finalizar, o módulo `ffmpeg-converter.js` utiliza FFmpeg.wasm para converter o arquivo para MP4 H.264 com:
+
+- Taxa de quadros constante (CFR) - resolve problemas de VFR em editores
+- Codec de vídeo libx264 (H.264)
+- Codec de áudio AAC @ 128kbps
+- Flag `faststart` para otimização de streaming
+
+> **Nota**: O FFmpeg.wasm (~31MB) é baixado do CDN na primeira conversão.

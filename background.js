@@ -159,12 +159,28 @@ async function startRecording(options = {}) {
   try {
     // Carrega configurações mais recentes
     const stored = await chrome.storage.local.get("settings");
+    console.log(
+      "[Background] Configurações do storage:",
+      JSON.stringify(stored.settings, null, 2)
+    );
+
     if (stored.settings) {
       state.settings = { ...DEFAULT_SETTINGS, ...stored.settings };
     }
 
+    console.log(
+      "[Background] state.settings após merge:",
+      JSON.stringify(state.settings, null, 2)
+    );
+
     // Merge com opções específicas desta gravação
     const recordingOptions = { ...state.settings, ...options };
+
+    console.log(
+      "[Background] recordingOptions final:",
+      JSON.stringify(recordingOptions, null, 2)
+    );
+    console.log("[Background] outputFormat:", recordingOptions.outputFormat);
 
     // Garante que o documento offscreen existe
     const offscreenReady = await ensureOffscreenDocument();

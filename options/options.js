@@ -151,6 +151,12 @@ function getSettingsFromUI() {
 async function saveSettings() {
   const settings = getSettingsFromUI();
 
+  console.log(
+    "[Options] Salvando configurações:",
+    JSON.stringify(settings, null, 2)
+  );
+  console.log("[Options] outputFormat:", settings.outputFormat);
+
   // Valida padrão de nome de arquivo
   const filenameValidation = validateFilenamePattern(settings.filenamePattern);
   if (!filenameValidation.valid) {
@@ -160,6 +166,7 @@ async function saveSettings() {
 
   try {
     await chrome.storage.local.set({ settings });
+    console.log("[Options] Configurações salvas com sucesso!");
     showNotification("Configurações salvas com sucesso!", "success");
   } catch (error) {
     console.error("Erro ao salvar configurações:", error);

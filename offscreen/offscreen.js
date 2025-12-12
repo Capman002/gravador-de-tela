@@ -253,6 +253,20 @@ async function handleRecordingStop(options = {}) {
       ? options
       : currentRecordingOptions || {};
 
+    // DEBUG: Log das opções
+    console.log(
+      "[Recording] Options recebidas:",
+      JSON.stringify(options, null, 2)
+    );
+    console.log(
+      "[Recording] currentRecordingOptions:",
+      JSON.stringify(currentRecordingOptions, null, 2)
+    );
+    console.log(
+      "[Recording] recordingOpts final:",
+      JSON.stringify(recordingOpts, null, 2)
+    );
+
     // Cria blob do vídeo WebM
     const webmBlob = new Blob(recordedChunks, { type: "video/webm" });
 
@@ -261,6 +275,8 @@ async function handleRecordingStop(options = {}) {
 
     let finalBlob = webmBlob;
     let outputFormat = recordingOpts.outputFormat || "webm";
+
+    console.log("[Recording] outputFormat detectado:", outputFormat);
 
     // Converte para MP4 se necessário
     if (outputFormat === "mp4") {

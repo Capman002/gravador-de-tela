@@ -1,0 +1,51 @@
+🎬 GRAVADOR DE TELA PRO - Descrição para Chrome Web Store
+
+=== DESCRIÇÃO CURTA (máx 132 caracteres) ===
+Grave sua tela, aba ou janela em até 4K. Áudio do sistema + microfone. 100% local, sem envio de dados.
+
+=== DESCRIÇÃO COMPLETA ===
+Grave sua tela, janela ou aba do navegador em alta qualidade com o Gravador de Tela Pro!
+
+🎯 RECURSOS PRINCIPAIS:
+• Qualidade até 4K Ultra HD (720p, 1080p, 1440p, 4K)
+• Taxa de quadros: 30 ou 60 FPS
+• Captura de áudio do sistema e microfone
+• Controle de volume separado para cada fonte de áudio
+• Atalhos de teclado globais para iniciar/parar rapidamente
+• Interface moderna e minimalista com tema escuro
+• Contador de tempo visível no ícone da extensão
+
+🔒 PRIVACIDADE EM PRIMEIRO LUGAR:
+• 100% local - nenhum dado sai do seu computador
+• Sem servidores externos
+• Sem analytics ou tracking
+• Código transparente e auditável
+
+⚡ FÁCIL DE USAR:
+1. Clique no ícone da extensão
+2. Escolha a fonte (tela, janela ou aba)
+3. Configure qualidade e áudio
+4. Clique em "Iniciar Gravação"
+5. O arquivo é salvo automaticamente no seu computador
+
+⌨️ ATALHOS DE TECLADO:
+• Alt+Shift+R: Abrir popup
+• Alt+Shift+S: Iniciar/Parar gravação
+
+💾 FORMATOS:
+• WebM com codec VP9 (melhor qualidade)
+• WebM com codec VP8 (mais compatível)
+• Suporte a H.264 (aceleração de hardware)
+
+Perfeito para:
+✓ Tutoriais e demos
+✓ Apresentações
+✓ Gameplay
+✓ Reuniões online
+✓ Suporte técnico
+
+=== CATEGORIA SUGERIDA ===
+Produtividade
+
+=== PALAVRAS-CHAVE ===
+screen recorder, gravador de tela, captura de tela, screen capture, screencast, gravação, recording, video, vídeo, 4k, hd

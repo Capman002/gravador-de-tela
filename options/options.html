@@ -26,7 +26,7 @@
             </div>
             <div class="logo-info">
               <h1>Gravador de Tela Pro</h1>
-              <span class="version">Versão 1.0.0</span>
+              <span class="version">Versão 2.1.0</span>
             </div>
           </div>
         </div>
@@ -84,26 +84,16 @@
 
             <div class="setting-item">
               <label class="setting-label" for="defaultCodec"
-                >Codec de Vídeo</label
+                >Formato de Gravação</label
               >
               <select id="defaultCodec" class="select-input">
-                <option value="vp9">VP9 (Melhor qualidade)</option>
-                <option value="vp8">VP8 (Mais compatível)</option>
-                <option value="h264">H.264 (Aceleração de hardware)</option>
+                <option value="h264_mp4">MP4 H.264 (DaVinci, Premiere)</option>
+                <option value="vp9">WebM VP9 (Melhor qualidade)</option>
+                <option value="vp8">WebM VP8 (Mais compatível)</option>
+                <option value="h264_webm">WebM H.264 (Hardware)</option>
               </select>
-              <p class="setting-hint">VP9 oferece melhor compressão</p>
-            </div>
-
-            <div class="setting-item">
-              <label class="setting-label" for="outputFormat"
-                >Formato de Saída</label
-              >
-              <select id="outputFormat" class="select-input">
-                <option value="webm">WebM (Padrão, mais rápido)</option>
-                <option value="mp4">MP4 (DaVinci, Premiere, etc.)</option>
-              </select>
-              <p class="setting-hint" id="formatHint">
-                Formato nativo, gravação imediata
+              <p class="setting-hint" id="codecHint">
+                MP4 H.264 é compatível com a maioria dos editores de vídeo
               </p>
             </div>
           </div>

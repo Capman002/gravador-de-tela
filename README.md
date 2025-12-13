@@ -1,102 +1,144 @@
-# Gravador de Tela Pro
+# 🎬 Gravador de Tela Pro
 
-![CSS](https://img.shields.io/badge/CSS-663399?style=flat&logo=css&logoColor=white)&nbsp;&nbsp; ![HTML](https://img.shields.io/badge/HTML-E34F26?style=flat&logo=html5&logoColor=white)&nbsp;&nbsp; ![JavaScript](https://img.shields.io/badge/JavaScript-F7DF1E?style=flat&logo=javascript&logoColor=white)&nbsp;&nbsp; ![JSON](https://img.shields.io/badge/JSON-000000?style=flat&logo=json&logoColor=white)&nbsp;&nbsp; ![Markdown](https://img.shields.io/badge/Markdown-000000?style=flat&logo=markdown&logoColor=white)
+Uma extensão Chrome de código aberto para gravação de tela em alta qualidade, com suporte a **MP4 H.264 CFR** nativo via WebCodecs.
 
-![Interface da Extensão](public/popup.png)
+![Chrome](https://img.shields.io/badge/Chrome-116+-green?logo=google-chrome)
+![Manifest V3](https://img.shields.io/badge/Manifest-V3-blue)
+![License](https://img.shields.io/badge/License-MIT-yellow)
 
-Extensão para Google Chrome desenvolvida em Manifest V3 para captura de tela, janelas ou abas. Realiza todo o processamento de mídia localmente utilizando a API `MediaRecorder` e Documentos Offscreen, suportando resoluções até 4K e mixagem de áudio (sistema e microfone).
+## ✨ Funcionalidades
 
-## Funcionalidades
+- 🖥️ **Gravação de tela, janela ou aba** - Escolha exatamente o que quer capturar
+- 🎯 **Até 4K 60fps** - Qualidade profissional
+- 📹 **MP4 H.264 CFR** - Compatível com DaVinci Resolve, Premiere e outros editores
+- 🎵 **Áudio do sistema + microfone** - Com controle de volume individual
+- ⚡ **WebCodecs nativo** - Sem conversão posterior, gravação direta em MP4
+- 🔒 **100% local** - Nenhum dado enviado para servidores externos
+- ⌨️ **Atalhos de teclado** - `Alt+Shift+R` para abrir, `Alt+Shift+S` para gravar/parar
 
-- **Captura de Vídeo**: Suporte a resoluções 720p, 1080p, 1440p e 4K.
-- **Taxa de Quadros**: Configurável entre 30 FPS e 60 FPS.
-- **Codecs**: Suporte a VP9, VP8 e H.264 (conforme disponibilidade do navegador).
-- **Exportação MP4**: Conversão para MP4 H.264 com taxa de quadros constante (CFR) para compatibilidade com editores como DaVinci Resolve e Premiere Pro.
-- **Mixagem de Áudio**: Utiliza `AudioContext` para combinar áudio da aba/sistema com o microfone, com controle de volume independente.
-- **Processamento Local**: Gera arquivos `.webm` ou `.mp4` diretamente no cliente, sem envio de dados para servidores externos.
-- **Feedback Visual**: Badge no ícone indicando tempo de gravação ou estado de pausa.
+## 📦 Formatos Suportados
 
-## Requisitos
+| Formato  | Codec              | CFR    | Uso                                     |
+| -------- | ------------------ | ------ | --------------------------------------- |
+| **MP4**  | H.264 High Profile | ✅ Sim | Edição profissional (DaVinci, Premiere) |
+| **WebM** | VP9                | ❌ VFR | Web, compartilhamento rápido            |
 
-- Navegador baseado em Chromium (Google Chrome, Edge, Brave, etc).
-- **Versão Mínima**: Chrome 116 (conforme definido em `manifest.json`).
+## 🚀 Instalação
 
-## Instalação
+### Via Chrome Web Store
 
-Como o projeto não possui um empacotador (`package.json`), a instalação é feita via carregamento direto da fonte:
+_Em breve_
 
-1. Clone este repositório.
-2. Abra o navegador e acesse `chrome://extensions`.
-3. Ative o **Modo do desenvolvedor** no canto superior direito.
-4. Clique no botão **Carregar sem compactação** (Load unpacked).
-5. Selecione a pasta raiz do projeto clonado.
+### Manual (Desenvolvedor)
 
-## Uso
+1. Clone o repositório:
 
-### Interface Gráfica
+```bash
+git clone https://github.com/seu-usuario/gravador-de-tela.git
+```
 
-Clique no ícone da extensão na barra de ferramentas ou utilize o atalho configurado para abrir o popup de controle.
+2. Abra `chrome://extensions` no Chrome
 
-### Atalhos de Teclado (Padrão)
+3. Ative o **Modo do desenvolvedor** (canto superior direito)
 
-Os atalhos são definidos no `manifest.json` e podem ser alterados em `chrome://extensions/shortcuts`.
+4. Clique em **Carregar sem compactação**
 
-- `Alt + Shift + R`: Abrir popup da extensão.
-- `Alt + Shift + S`: Iniciar ou Parar a gravação (toggle).
+5. Selecione a pasta do projeto
 
-### Configurações
+## 🎮 Como Usar
 
-Acesse a página de opções (botão de engrenagem no popup) para ajustar:
+1. Clique no ícone da extensão na barra de ferramentas
+2. Selecione a **fonte de captura** (Tela, Janela ou Aba)
+3. Escolha a **qualidade** (720p até 4K)
+4. Selecione o **formato** (MP4 ou WebM)
+5. Configure o **áudio** (sistema e/ou microfone)
+6. Clique em **Iniciar Gravação**
+7. Selecione a tela/janela/aba desejada
+8. Clique novamente para **Parar**
 
-- Qualidade padrão e FPS.
-- Codec preferencial.
-- **Formato de saída** (WebM ou MP4).
-- Fontes de áudio e volumes.
-- Contagem regressiva e salvamento automático.
-- Padrão de nomenclatura do arquivo (ex: `gravacao_{date}_{time}`).
+O arquivo será salvo automaticamente na pasta de downloads.
 
-![Configuração da Extensão](public/config.png)
+## ⚙️ Configurações
 
-## Estrutura do Projeto
+Acesse as configurações clicando no ícone ⚙️ no popup:
+
+- **Nome do arquivo** - Padrão customizável com `{date}` e `{time}`
+- **Salvar automaticamente** - Sem diálogo de "Salvar como"
+- **Contagem regressiva** - 3, 5 ou 10 segundos antes de iniciar
+
+## 🛠️ Tecnologias
+
+- **Manifest V3** - Arquitetura moderna de extensões Chrome
+- **WebCodecs API** - Encoding H.264 nativo via GPU
+- **mp4-muxer** - Muxing MP4 leve (~30KB)
+- **MediaRecorder API** - Fallback para WebM
+- **Offscreen Document** - Processamento em background
+
+## 📁 Estrutura do Projeto
 
 ```
-/
-├── background.js          # Service Worker: Gerencia estado global, timer e badge
-├── manifest.json          # Definições da extensão (Permissões, Versão, Assets)
-├── icons/                 # Ícones da aplicação e estados de gravação
-├── offscreen/             # Contexto para acesso ao DOM e MediaRecorder API
-│   ├── offscreen.html
-│   ├── offscreen.js       # Lógica de captura, mixagem de áudio e Blob
-│   └── ffmpeg-converter.js # Módulo de conversão WebM → MP4
-├── options/               # Página de configurações completas
-│   ├── options.html
-│   ├── options.css
-│   └── options.js
-├── popup/                 # Interface rápida de controle
+gravador-de-tela/
+├── manifest.json          # Configuração da extensão
+├── background.js          # Service Worker principal
+├── popup/                 # Interface do usuário
 │   ├── popup.html
 │   ├── popup.css
 │   └── popup.js
-├── public/                # Assets estáticos para documentação
-└── utils/                 # Constantes e funções utilitárias compartilhadas
+├── offscreen/             # Processamento de mídia
+│   ├── offscreen.html
+│   ├── offscreen.js
+│   └── mp4-muxer.min.js   # Muxer MP4 (31KB)
+├── options/               # Página de configurações
+│   ├── options.html
+│   ├── options.css
+│   └── options.js
+├── utils/                 # Utilitários compartilhados
+│   └── constants.js
+└── icons/                 # Ícones da extensão
 ```
 
-## FAQ Técnico
+## 🔧 Requisitos
 
-### Por que utilizar Documentos Offscreen?
+- **Google Chrome 116+** ou navegador baseado em Chromium
+- Suporte a **WebCodecs API** (nativo no Chrome)
 
-O Manifest V3 substituiu as _background pages_ por _Service Workers_, que não possuem acesso ao DOM nem às APIs de mídia (`MediaRecorder`, `AudioContext`). O projeto utiliza `chrome.offscreen` (`offscreen/offscreen.html`) para criar um ambiente oculto onde a captura e processamento do stream ocorrem.
+## 📝 Changelog
 
-### Como funciona a mixagem de áudio?
+### v2.1.0 (Atual)
 
-Em `offscreen.js`, quando ambas as fontes (sistema e microfone) estão ativas, a extensão cria um `AudioContext`. Os streams de áudio são convertidos em nós de mídia (`createMediaStreamSource`), passam por nós de ganho (`GainNode`) para controle de volume e são mesclados em um único destino (`createMediaStreamDestination`) antes de serem anexados ao `MediaRecorder`.
+- ✨ Gravação MP4 H.264 CFR nativa via WebCodecs
+- ✨ Sem necessidade de conversão posterior
+- ✨ Interface simplificada
+- 🗑️ Removido FFmpeg.wasm (era 24MB!)
+- 🐛 Corrigido suporte a 4K 60fps
 
-### Como funciona a conversão para MP4?
+### v1.x
 
-Quando o formato MP4 é selecionado, o vídeo é gravado normalmente em WebM e, ao finalizar, o módulo `ffmpeg-converter.js` utiliza FFmpeg.wasm para converter o arquivo para MP4 H.264 com:
+- Versões anteriores usavam MediaRecorder + conversão FFmpeg
 
-- Taxa de quadros constante (CFR) - resolve problemas de VFR em editores
-- Codec de vídeo libx264 (H.264)
-- Codec de áudio AAC @ 128kbps
-- Flag `faststart` para otimização de streaming
+## 📄 Licença
 
-> **Nota**: O FFmpeg.wasm (~31MB) é baixado do CDN na primeira conversão.
+Este projeto está licenciado sob a [MIT License](LICENSE).
+
+## 🤝 Contribuindo
+
+Contribuições são bem-vindas! Por favor:
+
+1. Faça um fork do projeto
+2. Crie uma branch para sua feature (`git checkout -b feature/nova-feature`)
+3. Commit suas mudanças (`git commit -m 'Adiciona nova feature'`)
+4. Push para a branch (`git push origin feature/nova-feature`)
+5. Abra um Pull Request
+
+## 🐛 Reportando Bugs
+
+Encontrou um bug? Abra uma [issue](https://github.com/seu-usuario/gravador-de-tela/issues) com:
+
+- Descrição do problema
+- Passos para reproduzir
+- Versão do Chrome
+- Console logs (se houver erros)
+
+---
+
+**Feito com ❤️ para a comunidade**

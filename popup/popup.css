@@ -201,6 +201,15 @@ body {
   gap: 8px;
 }
 
+.option-row {
+  display: flex;
+  gap: 10px;
+}
+
+.option-group.half {
+  flex: 1;
+}
+
 .option-label {
   font-size: 12px;
   font-weight: 600;
@@ -363,6 +372,23 @@ body {
 .toggle-label {
   font-size: 13px;
   color: var(--text-secondary);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.format-note {
+  margin-top: 4px;
+  padding: 8px 12px;
+  background: var(--bg-elevated);
+  border-radius: 6px;
+  border: 1px solid var(--border-color);
+}
+
+.format-note-text {
+  font-size: 11px;
+  color: var(--text-muted);
+  font-style: italic;
 }
 
 /* =============== Recording Controls =============== */

@@ -1,10 +1,10 @@
-// Service Worker Principal - Gerencia estado global da extensão
+﻿// Service Worker Principal - Gerencia estado global da extensÃ£o
 
 import {
   DEFAULT_SETTINGS,
   RECORDING_STATE,
   MESSAGE_TYPES,
-  OUTPUT_FORMATS,
+  RECORDING_FORMATS,
   formatTime,
   generateFilename,
 } from "./utils/constants.js";
@@ -20,12 +20,45 @@ let state = {
 let timerInterval = null;
 let offscreenDocumentCreated = false;
 
+// Migra configuraÃ§Ãµes antigas para nova versÃ£o
+async function migrateSettings() {
+  const stored = await chrome.storage.local.get("settings");
+  if (stored.settings) {
+    const settings = stored.settings;
+    let needsMigration = false;
+
+    // Migra codec antigo para novo formato
+    if (settings.codec && !settings.format) {
+      if (settings.codec === "h264_mp4" || settings.codec === "h264") {
+        settings.format = "mp4";
+      } else {
+        settings.format = "webm";
+      }
+      delete settings.codec;
+      needsMigration = true;
+    }
+
+    // Remove enableCFR (agora Ã© automÃ¡tico)
+    if (settings.enableCFR !== undefined) {
+      delete settings.enableCFR;
+      needsMigration = true;
+    }
+
+    if (needsMigration) {
+      await chrome.storage.local.set({ settings });
+    }
+  }
+}
+
+// Executa migraÃ§Ã£o na inicializaÃ§Ã£o
+migrateSettings();
+
 // ============ OFFSCREEN DOCUMENT MANAGEMENT ============
 
 async function ensureOffscreenDocument() {
   if (offscreenDocumentCreated) return true;
 
-  // Verifica se já existe
+  // Verifica se jÃ¡ existe
   const existingContexts = await chrome.runtime.getContexts({
     contextTypes: ["OFFSCREEN_DOCUMENT"],
     documentUrls: [chrome.runtime.getURL("offscreen/offscreen.html")],
@@ -67,7 +100,7 @@ async function closeOffscreenDocument() {
 async function updateBadge() {
   if (state.recording === RECORDING_STATE.RECORDING) {
     const timeText = formatTime(state.elapsedSeconds);
-    // Mostra apenas minutos:segundos na badge (espaço limitado)
+    // Mostra apenas minutos:segundos na badge (espaÃ§o limitado)
     const badgeText =
       state.elapsedSeconds < 3600
         ? timeText
@@ -76,7 +109,7 @@ async function updateBadge() {
     await chrome.action.setBadgeText({ text: badgeText });
     await chrome.action.setBadgeBackgroundColor({ color: "#ef4444" });
   } else if (state.recording === RECORDING_STATE.PAUSED) {
-    await chrome.action.setBadgeText({ text: "⏸" });
+    await chrome.action.setBadgeText({ text: "â¸" });
     await chrome.action.setBadgeBackgroundColor({ color: "#f59e0b" });
   } else {
     await chrome.action.setBadgeText({ text: "" });
@@ -118,7 +151,7 @@ function stopTimer() {
 
 function pauseTimer() {
   stopTimer();
-  // Mantém o tempo pausado
+  // MantÃ©m o tempo pausado
 }
 
 function resumeTimer() {
@@ -145,7 +178,7 @@ function broadcastState() {
       },
     })
     .catch(() => {
-      // Popup pode não estar aberto, ignora erro
+      // Popup pode nÃ£o estar aberto, ignora erro
     });
 }
 
@@ -153,14 +186,13 @@ function broadcastState() {
 
 async function startRecording(options = {}) {
   if (state.recording !== RECORDING_STATE.IDLE) {
-    return { success: false, error: "Já existe uma gravação em andamento" };
+    return { success: false, error: "JÃ¡ existe uma gravaÃ§Ã£o em andamento" };
   }
 
   try {
-    // Carrega configurações mais recentes
+    // Carrega configuraÃ§Ãµes mais recentes
     const stored = await chrome.storage.local.get("settings");
-    console.log(
-      "[Background] Configurações do storage:",
+      "[Background] ConfiguraÃ§Ãµes do storage:",
       JSON.stringify(stored.settings, null, 2)
     );
 
@@ -168,24 +200,21 @@ async function startRecording(options = {}) {
       state.settings = { ...DEFAULT_SETTINGS, ...stored.settings };
     }
 
-    console.log(
-      "[Background] state.settings após merge:",
+      "[Background] state.settings apÃ³s merge:",
       JSON.stringify(state.settings, null, 2)
     );
 
-    // Merge com opções específicas desta gravação
+    // Merge com opÃ§Ãµes especÃ­ficas desta gravaÃ§Ã£o
     const recordingOptions = { ...state.settings, ...options };
 
-    console.log(
       "[Background] recordingOptions final:",
       JSON.stringify(recordingOptions, null, 2)
     );
-    console.log("[Background] outputFormat:", recordingOptions.outputFormat);
 
     // Garante que o documento offscreen existe
     const offscreenReady = await ensureOffscreenDocument();
     if (!offscreenReady) {
-      return { success: false, error: "Falha ao criar contexto de gravação" };
+      return { success: false, error: "Falha ao criar contexto de gravaÃ§Ã£o" };
     }
 
     // Envia comando para o offscreen
@@ -204,14 +233,14 @@ async function startRecording(options = {}) {
       return { success: false, error: response?.error || "Erro desconhecido" };
     }
   } catch (error) {
-    console.error("Erro ao iniciar gravação:", error);
+    console.error("Erro ao iniciar gravaÃ§Ã£o:", error);
     return { success: false, error: error.message };
   }
 }
 
 async function stopRecording() {
   if (state.recording === RECORDING_STATE.IDLE) {
-    return { success: false, error: "Nenhuma gravação em andamento" };
+    return { success: false, error: "Nenhuma gravaÃ§Ã£o em andamento" };
   }
 
   try {
@@ -230,12 +259,12 @@ async function stopRecording() {
     await updateBadge();
     broadcastState();
 
-    // Fecha o documento offscreen após um delay
+    // Fecha o documento offscreen apÃ³s um delay
     setTimeout(() => closeOffscreenDocument(), 1000);
 
     return { success: true, filename: response?.filename };
   } catch (error) {
-    console.error("Erro ao parar gravação:", error);
+    console.error("Erro ao parar gravaÃ§Ã£o:", error);
     state.recording = RECORDING_STATE.IDLE;
     await updateIcon(false);
     await updateBadge();
@@ -245,7 +274,7 @@ async function stopRecording() {
 
 async function pauseRecording() {
   if (state.recording !== RECORDING_STATE.RECORDING) {
-    return { success: false, error: "Gravação não está ativa" };
+    return { success: false, error: "GravaÃ§Ã£o nÃ£o estÃ¡ ativa" };
   }
 
   try {
@@ -266,7 +295,7 @@ async function pauseRecording() {
 
 async function resumeRecording() {
   if (state.recording !== RECORDING_STATE.PAUSED) {
-    return { success: false, error: "Gravação não está pausada" };
+    return { success: false, error: "GravaÃ§Ã£o nÃ£o estÃ¡ pausada" };
   }
 
   try {
@@ -299,7 +328,7 @@ async function toggleRecording() {
 // ============ MESSAGE HANDLERS ============
 
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-  // Mensagens assíncronas
+  // Mensagens assÃ­ncronas
   (async () => {
     let response;
 
@@ -335,18 +364,15 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         break;
 
       case MESSAGE_TYPES.RECORDING_STOPPED:
-        // Notificação do offscreen que a gravação terminou
-        if (message.converting) {
-          // Está convertendo, aguarda conclusão
-          console.log("Convertendo vídeo para MP4...");
-        } else if (message.blob) {
-          // Gravação/conversão concluída, salva arquivo
+        // NotificaÃ§Ã£o do offscreen que a gravaÃ§Ã£o terminou
+        if (message.blob) {
+          // Salva diretamente (WebCodecs jÃ¡ gera MP4 H.264 CFR)
           await saveRecording(message.blob, message.extension);
         }
         break;
 
       case MESSAGE_TYPES.RECORDING_ERROR:
-        console.error("Erro de gravação:", message.error);
+        console.error("Erro de gravaÃ§Ã£o:", message.error);
         state.recording = RECORDING_STATE.IDLE;
         stopTimer();
         await updateIcon(false);
@@ -361,7 +387,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     sendResponse(response);
   })();
 
-  return true; // Indica resposta assíncrona
+  return true; // Indica resposta assÃ­ncrona
 });
 
 // ============ COMMAND HANDLERS ============
@@ -375,11 +401,14 @@ chrome.commands.onCommand.addListener(async (command) => {
 // ============ FILE SAVING ============
 
 async function saveRecording(blobUrl, extension) {
-  // Usa a extensão recebida ou obtém do formato configurado
-  const ext =
-    extension ||
-    OUTPUT_FORMATS[state.settings.outputFormat]?.extension ||
-    ".webm";
+  // Usa a extensÃ£o recebida ou obtÃ©m do formato configurado
+  let ext = extension;
+
+  if (!ext) {
+    const formatInfo = RECORDING_FORMATS[state.settings.format];
+    ext = formatInfo?.extension || ".mp4";
+  }
+
   const filename = generateFilename(state.settings.filenamePattern, ext);
 
   try {
@@ -396,7 +425,7 @@ async function saveRecording(blobUrl, extension) {
 // ============ INITIALIZATION ============
 
 async function initialize() {
-  // Carrega configurações salvas
+  // Carrega configuraÃ§Ãµes salvas
   const stored = await chrome.storage.local.get("settings");
   if (stored.settings) {
     state.settings = { ...DEFAULT_SETTINGS, ...stored.settings };
@@ -406,15 +435,14 @@ async function initialize() {
   await updateIcon(false);
   await updateBadge();
 
-  console.log("Gravador de Tela Pro inicializado");
 }
 
-// Inicializa quando o service worker começa
+// Inicializa quando o service worker comeÃ§a
 initialize();
 
-// Mantém o service worker vivo durante gravação
+// MantÃ©m o service worker vivo durante gravaÃ§Ã£o
 chrome.runtime.onConnect.addListener((port) => {
   if (port.name === "keepalive") {
-    // Mantém conexão aberta
+    // MantÃ©m conexÃ£o aberta
   }
 });

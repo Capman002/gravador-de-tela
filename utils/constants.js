@@ -9,33 +9,28 @@ export const QUALITY_PRESETS = {
 
 export const FPS_OPTIONS = [30, 60];
 
-export const CODEC_OPTIONS = {
-  vp9: { mimeType: "video/webm;codecs=vp9", label: "VP9 (Melhor qualidade)" },
-  vp8: { mimeType: "video/webm;codecs=vp8", label: "VP8 (Mais compatível)" },
-  h264: { mimeType: "video/webm;codecs=h264", label: "H.264 (Hardware)" },
-};
-
-// Formatos de saída disponíveis
-export const OUTPUT_FORMATS = {
-  webm: {
-    extension: ".webm",
-    mimeType: "video/webm",
-    label: "WebM (Padrão)",
-    description: "Formato nativo, mais rápido",
-  },
+// Formatos de gravação
+export const RECORDING_FORMATS = {
   mp4: {
+    label: "MP4 (H.264 CFR)",
     extension: ".mp4",
     mimeType: "video/mp4",
-    label: "MP4 (H.264)",
-    description: "Compatível com editores (DaVinci, Premiere)",
+    description: "Compatível com DaVinci/Premiere. CFR nativo via WebCodecs.",
+    useWebCodecs: true,
+  },
+  webm: {
+    label: "WebM (VP9)",
+    extension: ".webm",
+    mimeType: "video/webm",
+    description: "Formato nativo do navegador. Mais rápido, VFR.",
+    useWebCodecs: false,
   },
 };
 
 export const DEFAULT_SETTINGS = {
-  quality: "4k",
+  quality: "1080p",
   fps: 60,
-  codec: "h264",
-  outputFormat: "mp4",
+  format: "mp4", // MP4 por padrão agora!
   captureAudio: true,
   captureMic: false,
   micVolume: 100,
@@ -73,7 +68,7 @@ export const MESSAGE_TYPES = {
   RECORDING_STARTED: "RECORDING_STARTED",
   RECORDING_STOPPED: "RECORDING_STOPPED",
   RECORDING_ERROR: "RECORDING_ERROR",
-  RECORDING_DATA: "RECORDING_DATA",
+  RECORDING_PROGRESS: "RECORDING_PROGRESS",
 
   // Background -> Popup
   STATE_UPDATE: "STATE_UPDATE",
@@ -103,7 +98,7 @@ export function formatTime(seconds) {
 }
 
 // Função para gerar nome de arquivo
-export function generateFilename(pattern, extension = ".webm") {
+export function generateFilename(pattern, extension = ".mp4") {
   const now = new Date();
   const date = now.toISOString().split("T")[0];
   const time = now.toTimeString().split(" ")[0].replace(/:/g, "-");

@@ -1,21 +1,34 @@
-// Offscreen Document - Processa gravação de mídia em background
+﻿// Offscreen Document - GravaÃ§Ã£o MP4 H.264 CFR via WebCodecs + mp4-muxer
 
 import {
   QUALITY_PRESETS,
-  CODEC_OPTIONS,
+  RECORDING_FORMATS,
   MESSAGE_TYPES,
-  OUTPUT_FORMATS,
 } from "../utils/constants.js";
 
-import { convertToMP4, terminateFFmpeg } from "./ffmpeg-converter.js";
+// Importa mp4-muxer (serÃ¡ carregado via script tag no HTML)
+// O Mp4Muxer estarÃ¡ disponÃ­vel globalmente
 
-let mediaRecorder = null;
-let recordedChunks = [];
+// Estado da gravaÃ§Ã£o
+let isRecording = false;
+let isPaused = false;
 let displayStream = null;
 let micStream = null;
-let combinedStream = null;
 let audioContext = null;
-let currentRecordingOptions = null; // Armazena opções da gravação atual
+
+// WebCodecs
+let videoEncoder = null;
+let audioEncoder = null;
+let muxer = null;
+let muxerTarget = null;
+
+// MediaRecorder fallback (para WebM)
+let mediaRecorder = null;
+let recordedChunks = [];
+
+// Contadores
+let frameCount = 0;
+let currentOptions = null;
 
 // ============ STREAM MANAGEMENT ============
 
@@ -23,8 +36,6 @@ async function getDisplayMediaStream(options) {
   const qualityPreset =
     QUALITY_PRESETS[options.quality] || QUALITY_PRESETS["1080p"];
 
-  // Mapeia a fonte selecionada para displaySurface
-  // monitor = tela inteira, window = janela, browser = aba do navegador
   const surfaceMap = {
     screen: "monitor",
     window: "window",
@@ -38,7 +49,7 @@ async function getDisplayMediaStream(options) {
       width: { ideal: qualityPreset.width, max: qualityPreset.width },
       height: { ideal: qualityPreset.height, max: qualityPreset.height },
       frameRate: { ideal: options.fps || 30, max: 60 },
-      displaySurface: displaySurface, // Pré-seleciona a aba no picker
+      displaySurface: displaySurface,
     },
     audio: options.captureAudio
       ? {
@@ -49,7 +60,6 @@ async function getDisplayMediaStream(options) {
           channelCount: 2,
         }
       : false,
-    // preferCurrentTab faz a aba atual aparecer primeiro quando source = tab
     preferCurrentTab: options.source === "tab",
   };
 
@@ -71,294 +81,394 @@ async function getMicrophoneStream(options) {
         echoCancellation: true,
         noiseSuppression: true,
         autoGainControl: true,
+        sampleRate: 48000,
+        channelCount: 1,
       },
       video: false,
     });
     return micStream;
   } catch (error) {
     console.error("Erro ao obter stream do microfone:", error);
-    // Não falha completamente, apenas não terá áudio do mic
     return null;
   }
 }
 
-function combineAudioStreams(displayStream, micStream, options) {
-  // Se não tiver ambos os streams de áudio, retorna o que tiver
-  const displayAudio = displayStream.getAudioTracks();
-  const micAudio = micStream?.getAudioTracks() || [];
+// ============ WEBCODECS RECORDING (MP4) ============
 
-  if (displayAudio.length === 0 && micAudio.length === 0) {
-    // Sem áudio, retorna apenas vídeo
-    return new MediaStream(displayStream.getVideoTracks());
+async function startWebCodecsRecording(options) {
+  const qualityPreset =
+    QUALITY_PRESETS[options.quality] || QUALITY_PRESETS["1080p"];
+  const fps = options.fps || 60;
+  const width = qualityPreset.width;
+  const height = qualityPreset.height;
+
+
+  // ObtÃ©m streams
+  const display = await getDisplayMediaStream(options);
+  const mic = await getMicrophoneStream(options);
+
+  // Calcula bitrate
+  const videoBitrate = calculateBitrate(qualityPreset, fps);
+  const audioBitrate = 128000;
+
+
+  // Cria o target do muxer (ArrayBuffer)
+  muxerTarget = new Mp4Muxer.ArrayBufferTarget();
+
+  // Configura o muxer
+  const hasAudio = display.getAudioTracks().length > 0 || mic;
+
+  muxer = new Mp4Muxer.Muxer({
+    target: muxerTarget,
+    video: {
+      codec: "avc",
+      width: width,
+      height: height,
+    },
+    audio: hasAudio
+      ? {
+          codec: "aac",
+          numberOfChannels: 2,
+          sampleRate: 48000,
+        }
+      : undefined,
+    fastStart: "in-memory",
+    firstTimestampBehavior: "offset",
+  });
+
+  // Configura o encoder de vÃ­deo
+  videoEncoder = new VideoEncoder({
+    output: (chunk, meta) => {
+      muxer.addVideoChunk(chunk, meta);
+    },
+    error: (e) => {
+      console.error("[WebCodecs] Erro no VideoEncoder:", e);
+      sendError(e.message);
+    },
+  });
+
+  // H.264 High Profile
+  // avc1.640033 = High Profile, Level 5.1 (4K 60fps)
+  // avc1.64002A = High Profile, Level 4.2 (4K 30fps ou 1080p 60fps)
+  const codecLevel = height > 1080 && fps > 30 ? "640033" : "64002A";
+
+  videoEncoder.configure({
+    codec: `avc1.${codecLevel}`,
+    width: width,
+    height: height,
+    bitrate: videoBitrate,
+    framerate: fps,
+    latencyMode: "quality",
+    avc: { format: "avc" },
+  });
+
+  // Configura encoder de Ã¡udio se necessÃ¡rio
+  if (hasAudio) {
+    audioEncoder = new AudioEncoder({
+      output: (chunk, meta) => {
+        muxer.addAudioChunk(chunk, meta);
+      },
+      error: (e) => {
+        console.error("[WebCodecs] Erro no AudioEncoder:", e);
+      },
+    });
+
+    audioEncoder.configure({
+      codec: "mp4a.40.2", // AAC-LC
+      numberOfChannels: 2,
+      sampleRate: 48000,
+      bitrate: audioBitrate,
+    });
   }
 
-  if (displayAudio.length === 0) {
-    // Apenas mic
-    return new MediaStream([...displayStream.getVideoTracks(), ...micAudio]);
+  // Processa vÃ­deo
+  const videoTrack = display.getVideoTracks()[0];
+  const processor = new MediaStreamTrackProcessor({ track: videoTrack });
+  const reader = processor.readable.getReader();
+
+  // Handle quando usuÃ¡rio para o compartilhamento
+  videoTrack.onended = () => {
+    if (isRecording) {
+      stopRecording();
+    }
+  };
+
+  // Processa Ã¡udio se tiver
+  if (hasAudio) {
+    const audioTracks = [
+      ...display.getAudioTracks(),
+      ...(mic ? mic.getAudioTracks() : []),
+    ];
+
+    if (audioTracks.length > 0) {
+      processAudio(audioTracks, options);
+    }
   }
 
-  if (micAudio.length === 0) {
-    // Apenas áudio da aba/tela
-    return displayStream;
-  }
+  isRecording = true;
+  isPaused = false;
+  frameCount = 0;
 
-  // Combina ambos os áudios usando AudioContext
+  // Loop de leitura de frames
+  const frameDuration = 1000000 / fps; // Em microsegundos
+  let expectedTimestamp = 0;
+
+  const readFrames = async () => {
+    try {
+      while (isRecording) {
+        const { value: frame, done } = await reader.read();
+
+        if (done || !isRecording) break;
+
+        if (!isPaused) {
+          // Usa timestamp fixo para CFR
+          const timestamp = frameCount * frameDuration;
+
+          videoEncoder.encode(frame, {
+            keyFrame: frameCount % (fps * 2) === 0, // Keyframe a cada 2 segundos
+          });
+
+          frameCount++;
+        }
+
+        frame.close();
+      }
+    } catch (error) {
+      console.error("[WebCodecs] Erro no loop de frames:", error);
+    }
+  };
+
+  readFrames();
+
+  return { success: true };
+}
+
+async function processAudio(audioTracks, options) {
   try {
-    audioContext = new AudioContext();
+    audioContext = new AudioContext({ sampleRate: 48000 });
+
     const destination = audioContext.createMediaStreamDestination();
 
-    // Stream da aba/tela
-    const displaySource = audioContext.createMediaStreamSource(
-      new MediaStream(displayAudio)
-    );
-    const displayGain = audioContext.createGain();
-    displayGain.gain.value = (options.tabVolume || 100) / 100;
-    displaySource.connect(displayGain);
-    displayGain.connect(destination);
+    for (const track of audioTracks) {
+      const source = audioContext.createMediaStreamSource(
+        new MediaStream([track])
+      );
+      const gain = audioContext.createGain();
 
-    // Stream do microfone
-    const micSource = audioContext.createMediaStreamSource(
-      new MediaStream(micAudio)
-    );
-    const micGain = audioContext.createGain();
-    micGain.gain.value = (options.micVolume || 100) / 100;
-    micSource.connect(micGain);
-    micGain.connect(destination);
+      // Aplica volume baseado no tipo de track
+      if (track.label.includes("microphone") || track.kind === "audioinput") {
+        gain.gain.value = (options.micVolume || 100) / 100;
+      } else {
+        gain.gain.value = (options.tabVolume || 100) / 100;
+      }
 
-    // Combina vídeo + áudio mixado
-    combinedStream = new MediaStream([
-      ...displayStream.getVideoTracks(),
-      ...destination.stream.getAudioTracks(),
-    ]);
+      source.connect(gain);
+      gain.connect(destination);
+    }
 
-    return combinedStream;
+    // Cria um processador de Ã¡udio
+    const audioTrack = destination.stream.getAudioTracks()[0];
+
+    // Usa MediaStreamTrackProcessor para Ã¡udio tambÃ©m
+    // Nota: Isso pode nÃ£o estar disponÃ­vel em todos os navegadores
+    if (typeof MediaStreamTrackProcessor !== "undefined") {
+      const audioProcessor = new MediaStreamTrackProcessor({
+        track: audioTrack,
+      });
+      const audioReader = audioProcessor.readable.getReader();
+
+      const readAudio = async () => {
+        try {
+          while (isRecording && audioEncoder) {
+            const { value: audioData, done } = await audioReader.read();
+
+            if (done || !isRecording) break;
+
+            if (!isPaused && audioEncoder.state === "configured") {
+              audioEncoder.encode(audioData);
+            }
+
+            audioData.close();
+          }
+        } catch (error) {
+          console.error("[WebCodecs] Erro no loop de Ã¡udio:", error);
+        }
+      };
+
+      readAudio();
+    }
   } catch (error) {
-    console.error("Erro ao combinar streams de áudio:", error);
-    // Fallback: retorna stream original
-    return displayStream;
+    console.error("[WebCodecs] Erro ao processar Ã¡udio:", error);
   }
 }
 
-// ============ RECORDING CONTROL ============
+async function stopWebCodecsRecording() {
+  isRecording = false;
 
-async function startRecording(options) {
   try {
-    recordedChunks = [];
-    currentRecordingOptions = options; // Armazena para usar na conversão
-
-    // Obtém streams
-    const display = await getDisplayMediaStream(options);
-    const mic = await getMicrophoneStream(options);
-
-    // Combina streams se necessário
-    const finalStream = combineAudioStreams(display, mic, options);
-
-    // Detecta codec suportado
-    const codecInfo = CODEC_OPTIONS[options.codec] || CODEC_OPTIONS["vp9"];
-    let mimeType = codecInfo.mimeType;
-
-    // Verifica suporte
-    if (!MediaRecorder.isTypeSupported(mimeType)) {
-      // Fallback para VP8
-      mimeType = "video/webm;codecs=vp8";
-      if (!MediaRecorder.isTypeSupported(mimeType)) {
-        mimeType = "video/webm";
-      }
+    // Finaliza encoders
+    if (videoEncoder && videoEncoder.state !== "closed") {
+      await videoEncoder.flush();
+      videoEncoder.close();
     }
 
-    // Calcula bitrate baseado na qualidade
-    const qualityPreset =
-      QUALITY_PRESETS[options.quality] || QUALITY_PRESETS["1080p"];
-    const videoBitrate = calculateBitrate(qualityPreset, options.fps);
+    if (audioEncoder && audioEncoder.state !== "closed") {
+      await audioEncoder.flush();
+      audioEncoder.close();
+    }
 
-    // Cria MediaRecorder
-    mediaRecorder = new MediaRecorder(finalStream, {
-      mimeType: mimeType,
-      videoBitsPerSecond: videoBitrate,
-      audioBitsPerSecond: 128000,
+    // Finaliza muxer
+    muxer.finalize();
+
+    // ObtÃ©m o arquivo final
+    const buffer = muxerTarget.buffer;
+    const blob = new Blob([buffer], { type: "video/mp4" });
+
+      size: blob.size,
+      frames: frameCount,
     });
 
-    mediaRecorder.ondataavailable = (event) => {
-      if (event.data && event.data.size > 0) {
-        recordedChunks.push(event.data);
-      }
-    };
+    // Limpa recursos
+    cleanupStreams();
 
-    mediaRecorder.onstop = async () => {
-      await handleRecordingStop(options);
-    };
+    // Cria URL e notifica
+    const blobUrl = URL.createObjectURL(blob);
 
-    mediaRecorder.onerror = (event) => {
-      console.error("Erro no MediaRecorder:", event.error);
-      chrome.runtime.sendMessage({
-        type: MESSAGE_TYPES.RECORDING_ERROR,
-        error: event.error?.message || "Erro desconhecido",
-      });
-    };
-
-    // Handler quando o usuário para o compartilhamento
-    display.getVideoTracks()[0].onended = () => {
-      if (mediaRecorder && mediaRecorder.state !== "inactive") {
-        stopRecording();
-      }
-    };
-
-    // Inicia gravação (coleta dados a cada segundo)
-    mediaRecorder.start(1000);
+    chrome.runtime.sendMessage({
+      type: MESSAGE_TYPES.RECORDING_STOPPED,
+      blob: blobUrl,
+      extension: ".mp4",
+      size: blob.size,
+    });
 
     return { success: true };
   } catch (error) {
-    console.error("Erro ao iniciar gravação:", error);
+    console.error("[WebCodecs] Erro ao parar gravaÃ§Ã£o:", error);
     cleanupStreams();
     return { success: false, error: error.message };
   }
 }
 
-function calculateBitrate(quality, fps) {
-  // Bitrates aproximados para boa qualidade
-  const baseBitrates = {
-    720: 3000000, // 3 Mbps
-    1080: 6000000, // 6 Mbps
-    1440: 12000000, // 12 Mbps
-    2160: 25000000, // 25 Mbps
+// ============ MEDIARECORDER FALLBACK (WebM) ============
+
+async function startMediaRecorderRecording(options) {
+  recordedChunks = [];
+
+  const display = await getDisplayMediaStream(options);
+  const mic = await getMicrophoneStream(options);
+
+  // Combina streams
+  let finalStream = display;
+  if (mic && display.getAudioTracks().length > 0) {
+    // Combina Ã¡udios
+    audioContext = new AudioContext();
+    const destination = audioContext.createMediaStreamDestination();
+
+    const displaySource = audioContext.createMediaStreamSource(
+      new MediaStream(display.getAudioTracks())
+    );
+    displaySource.connect(destination);
+
+    const micSource = audioContext.createMediaStreamSource(mic);
+    micSource.connect(destination);
+
+    finalStream = new MediaStream([
+      ...display.getVideoTracks(),
+      ...destination.stream.getAudioTracks(),
+    ]);
+  } else if (mic) {
+    finalStream = new MediaStream([
+      ...display.getVideoTracks(),
+      ...mic.getAudioTracks(),
+    ]);
+  }
+
+  const qualityPreset =
+    QUALITY_PRESETS[options.quality] || QUALITY_PRESETS["1080p"];
+  const videoBitrate = calculateBitrate(qualityPreset, options.fps);
+
+  // Tenta VP9, fallback para VP8
+  let mimeType = "video/webm;codecs=vp9";
+  if (!MediaRecorder.isTypeSupported(mimeType)) {
+    mimeType = "video/webm;codecs=vp8";
+  }
+
+  mediaRecorder = new MediaRecorder(finalStream, {
+    mimeType: mimeType,
+    videoBitsPerSecond: videoBitrate,
+    audioBitsPerSecond: 128000,
+  });
+
+  mediaRecorder.ondataavailable = (event) => {
+    if (event.data && event.data.size > 0) {
+      recordedChunks.push(event.data);
+    }
   };
 
-  const baseBitrate = baseBitrates[quality.height] || 6000000;
+  mediaRecorder.onstop = async () => {
+    const blob = new Blob(recordedChunks, { type: "video/webm" });
+    cleanupStreams();
 
-  // Ajusta para FPS
+    const blobUrl = URL.createObjectURL(blob);
+    chrome.runtime.sendMessage({
+      type: MESSAGE_TYPES.RECORDING_STOPPED,
+      blob: blobUrl,
+      extension: ".webm",
+      size: blob.size,
+    });
+  };
+
+  mediaRecorder.onerror = (event) => {
+    console.error("Erro no MediaRecorder:", event.error);
+    sendError(event.error?.message || "Erro desconhecido");
+  };
+
+  // Handler quando usuÃ¡rio para o compartilhamento
+  display.getVideoTracks()[0].onended = () => {
+    if (mediaRecorder && mediaRecorder.state !== "inactive") {
+      stopMediaRecorderRecording();
+    }
+  };
+
+  mediaRecorder.start(1000);
+  isRecording = true;
+
+  return { success: true };
+}
+
+async function stopMediaRecorderRecording() {
+  if (!mediaRecorder || mediaRecorder.state === "inactive") {
+    return { success: false, error: "Nenhuma gravaÃ§Ã£o ativa" };
+  }
+
+  return new Promise((resolve) => {
+    const originalOnstop = mediaRecorder.onstop;
+    mediaRecorder.onstop = async (event) => {
+      if (originalOnstop) originalOnstop(event);
+      resolve({ success: true });
+    };
+    mediaRecorder.stop();
+    isRecording = false;
+  });
+}
+
+// ============ HELPERS ============
+
+function calculateBitrate(quality, fps) {
+  const baseBitrates = {
+    720: 4000000,
+    1080: 8000000,
+    1440: 16000000,
+    2160: 35000000,
+  };
+
+  const baseBitrate = baseBitrates[quality.height] || 8000000;
   const fpsMultiplier = fps === 60 ? 1.5 : 1;
 
   return Math.floor(baseBitrate * fpsMultiplier);
 }
 
-async function stopRecording() {
-  if (!mediaRecorder || mediaRecorder.state === "inactive") {
-    return { success: false, error: "Nenhuma gravação ativa" };
-  }
-
-  return new Promise((resolve) => {
-    mediaRecorder.onstop = async () => {
-      const result = await handleRecordingStop();
-      resolve(result);
-    };
-
-    mediaRecorder.stop();
-  });
-}
-
-async function handleRecordingStop(options = {}) {
-  try {
-    // Usa opções passadas ou as armazenadas
-    const recordingOpts = options.outputFormat
-      ? options
-      : currentRecordingOptions || {};
-
-    // DEBUG: Log das opções
-    console.log(
-      "[Recording] Options recebidas:",
-      JSON.stringify(options, null, 2)
-    );
-    console.log(
-      "[Recording] currentRecordingOptions:",
-      JSON.stringify(currentRecordingOptions, null, 2)
-    );
-    console.log(
-      "[Recording] recordingOpts final:",
-      JSON.stringify(recordingOpts, null, 2)
-    );
-
-    // Cria blob do vídeo WebM
-    const webmBlob = new Blob(recordedChunks, { type: "video/webm" });
-
-    // Limpa recursos de gravação
-    cleanupStreams();
-
-    let finalBlob = webmBlob;
-    let outputFormat = recordingOpts.outputFormat || "webm";
-
-    console.log("[Recording] outputFormat detectado:", outputFormat);
-
-    // Converte para MP4 se necessário
-    if (outputFormat === "mp4") {
-      console.log("Iniciando conversão para MP4...");
-
-      // Notifica background que está convertendo
-      chrome.runtime.sendMessage({
-        type: MESSAGE_TYPES.RECORDING_STOPPED,
-        converting: true,
-        originalSize: webmBlob.size,
-      });
-
-      try {
-        finalBlob = await convertToMP4(
-          webmBlob,
-          { fps: recordingOpts.fps || 60 },
-          (progress, time) => {
-            // Callback de progresso
-            chrome.runtime
-              .sendMessage({
-                type: "CONVERSION_PROGRESS",
-                progress,
-                time,
-              })
-              .catch(() => {});
-          }
-        );
-        console.log("Conversão para MP4 concluída!");
-
-        // Limpa FFmpeg após conversão
-        await terminateFFmpeg();
-      } catch (conversionError) {
-        console.error("Erro na conversão MP4:", conversionError);
-        // Fallback: salva como WebM
-        console.log("Salvando como WebM devido a erro na conversão...");
-        finalBlob = webmBlob;
-        outputFormat = "webm";
-      }
-    }
-
-    const blobUrl = URL.createObjectURL(finalBlob);
-    const formatInfo = OUTPUT_FORMATS[outputFormat];
-
-    // Notifica background com o resultado final
-    chrome.runtime.sendMessage({
-      type: MESSAGE_TYPES.RECORDING_STOPPED,
-      blob: blobUrl,
-      size: finalBlob.size,
-      format: outputFormat,
-      extension: formatInfo.extension,
-      mimeType: formatInfo.mimeType,
-    });
-
-    // Limpa opções
-    currentRecordingOptions = null;
-
-    return { success: true, blobUrl, format: outputFormat };
-  } catch (error) {
-    console.error("Erro ao finalizar gravação:", error);
-    currentRecordingOptions = null;
-    return { success: false, error: error.message };
-  }
-}
-
-function pauseRecording() {
-  if (mediaRecorder && mediaRecorder.state === "recording") {
-    mediaRecorder.pause();
-    return { success: true };
-  }
-  return { success: false, error: "Não é possível pausar" };
-}
-
-function resumeRecording() {
-  if (mediaRecorder && mediaRecorder.state === "paused") {
-    mediaRecorder.resume();
-    return { success: true };
-  }
-  return { success: false, error: "Não é possível retomar" };
-}
-
 function cleanupStreams() {
-  // Para todas as tracks
   if (displayStream) {
     displayStream.getTracks().forEach((track) => track.stop());
     displayStream = null;
@@ -369,22 +479,75 @@ function cleanupStreams() {
     micStream = null;
   }
 
-  if (combinedStream) {
-    combinedStream.getTracks().forEach((track) => track.stop());
-    combinedStream = null;
-  }
-
-  // Fecha AudioContext
   if (audioContext) {
-    audioContext.close();
+    audioContext.close().catch(() => {});
     audioContext = null;
   }
 
+  videoEncoder = null;
+  audioEncoder = null;
+  muxer = null;
+  muxerTarget = null;
   mediaRecorder = null;
   recordedChunks = [];
 }
 
-// ============ MESSAGE HANDLERS ============
+function sendError(message) {
+  chrome.runtime.sendMessage({
+    type: MESSAGE_TYPES.RECORDING_ERROR,
+    error: message,
+  });
+}
+
+// ============ PUBLIC API ============
+
+async function startRecording(options) {
+  currentOptions = options;
+  const format = RECORDING_FORMATS[options.format] || RECORDING_FORMATS.mp4;
+
+
+  // Verifica suporte a WebCodecs
+  const webCodecsSupported =
+    typeof VideoEncoder !== "undefined" &&
+    typeof MediaStreamTrackProcessor !== "undefined";
+
+  if (format.useWebCodecs && webCodecsSupported) {
+    return startWebCodecsRecording(options);
+  } else {
+    return startMediaRecorderRecording(options);
+  }
+}
+
+async function stopRecording() {
+  const format =
+    RECORDING_FORMATS[currentOptions?.format] || RECORDING_FORMATS.mp4;
+
+  if (format.useWebCodecs && videoEncoder) {
+    return stopWebCodecsRecording();
+  } else if (mediaRecorder) {
+    return stopMediaRecorderRecording();
+  }
+
+  return { success: false, error: "Nenhuma gravaÃ§Ã£o ativa" };
+}
+
+function pauseRecording() {
+  isPaused = true;
+  if (mediaRecorder && mediaRecorder.state === "recording") {
+    mediaRecorder.pause();
+  }
+  return { success: true };
+}
+
+function resumeRecording() {
+  isPaused = false;
+  if (mediaRecorder && mediaRecorder.state === "paused") {
+    mediaRecorder.resume();
+  }
+  return { success: true };
+}
+
+// ============ MESSAGE HANDLING ============
 
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   (async () => {
@@ -393,6 +556,13 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     switch (message.type) {
       case MESSAGE_TYPES.OFFSCREEN_START:
         response = await startRecording(message.options);
+        if (response.success) {
+          chrome.runtime.sendMessage({
+            type: MESSAGE_TYPES.RECORDING_STARTED,
+          });
+        } else {
+          sendError(response.error);
+        }
         break;
 
       case MESSAGE_TYPES.OFFSCREEN_STOP:
@@ -408,7 +578,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         break;
 
       default:
-        response = { error: "Comando não reconhecido" };
+        response = { error: "Tipo de mensagem desconhecido" };
     }
 
     sendResponse(response);
@@ -417,4 +587,3 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   return true;
 });
 
-console.log("Offscreen document carregado");

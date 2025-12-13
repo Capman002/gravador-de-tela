@@ -1,4 +1,4 @@
-// Options Page Script - Gerencia configurações da extensão
+﻿// Options Page Script - Gerencia configuraÃ§Ãµes da extensÃ£o
 
 import { DEFAULT_SETTINGS } from "../utils/constants.js";
 
@@ -8,8 +8,7 @@ const elements = {
   defaultQuality: document.getElementById("defaultQuality"),
   defaultFps: document.getElementById("defaultFps"),
   defaultCodec: document.getElementById("defaultCodec"),
-  outputFormat: document.getElementById("outputFormat"),
-  formatHint: document.getElementById("formatHint"),
+  codecHint: document.getElementById("codecHint"),
 
   // Audio
   captureAudio: document.getElementById("captureAudio"),
@@ -51,8 +50,7 @@ async function loadSettings() {
   elements.defaultQuality.value = settings.quality;
   elements.defaultFps.value = settings.fps.toString();
   elements.defaultCodec.value = settings.codec;
-  elements.outputFormat.value = settings.outputFormat || "webm";
-  updateFormatHint(settings.outputFormat || "webm");
+  updateCodecHint(settings.codec);
 
   // Audio
   elements.captureAudio.checked = settings.captureAudio;
@@ -69,13 +67,17 @@ async function loadSettings() {
   elements.filenamePattern.value = settings.filenamePattern;
 }
 
-// Atualiza dica do formato de saída
-function updateFormatHint(format) {
+// Atualiza dica do codec
+function updateCodecHint(codec) {
   const hints = {
-    webm: "Formato nativo, gravação imediata",
-    mp4: "⚠️ Conversão após gravação (~31MB de download inicial)",
+    h264_mp4: "âœ… CompatÃ­vel com DaVinci Resolve, Premiere, After Effects",
+    vp9: "Alta qualidade, bom para YouTube e web",
+    vp8: "Boa compatibilidade com navegadores antigos",
+    h264_webm: "Usa aceleraÃ§Ã£o de hardware, WebM container",
   };
-  elements.formatHint.textContent = hints[format] || hints.webm;
+  if (elements.codecHint) {
+    elements.codecHint.textContent = hints[codec] || hints.h264_mp4;
+  }
 }
 
 // =============== Event Listeners ===============
@@ -87,9 +89,9 @@ function setupEventListeners() {
   // Countdown toggle affects seconds visibility
   elements.showCountdown.addEventListener("change", updateVisibility);
 
-  // Output format hint update
-  elements.outputFormat.addEventListener("change", () => {
-    updateFormatHint(elements.outputFormat.value);
+  // Codec hint update
+  elements.defaultCodec.addEventListener("change", () => {
+    updateCodecHint(elements.defaultCodec.value);
   });
 
   // Volume sliders update display
@@ -136,7 +138,6 @@ function getSettingsFromUI() {
     quality: elements.defaultQuality.value,
     fps: parseInt(elements.defaultFps.value),
     codec: elements.defaultCodec.value,
-    outputFormat: elements.outputFormat.value,
     captureAudio: elements.captureAudio.checked,
     captureMic: elements.captureMic.checked,
     tabVolume: parseInt(elements.tabVolume.value),
@@ -151,13 +152,11 @@ function getSettingsFromUI() {
 async function saveSettings() {
   const settings = getSettingsFromUI();
 
-  console.log(
-    "[Options] Salvando configurações:",
+    "[Options] Salvando configuraÃ§Ãµes:",
     JSON.stringify(settings, null, 2)
   );
-  console.log("[Options] outputFormat:", settings.outputFormat);
 
-  // Valida padrão de nome de arquivo
+  // Valida padrÃ£o de nome de arquivo
   const filenameValidation = validateFilenamePattern(settings.filenamePattern);
   if (!filenameValidation.valid) {
     showNotification(filenameValidation.error, "error");
@@ -166,25 +165,24 @@ async function saveSettings() {
 
   try {
     await chrome.storage.local.set({ settings });
-    console.log("[Options] Configurações salvas com sucesso!");
-    showNotification("Configurações salvas com sucesso!", "success");
+    showNotification("ConfiguraÃ§Ãµes salvas com sucesso!", "success");
   } catch (error) {
-    console.error("Erro ao salvar configurações:", error);
-    showNotification("Erro ao salvar configurações", "error");
+    console.error("Erro ao salvar configuraÃ§Ãµes:", error);
+    showNotification("Erro ao salvar configuraÃ§Ãµes", "error");
   }
 }
 
 function validateFilenamePattern(pattern) {
   if (!pattern || pattern.trim() === "") {
-    return { valid: false, error: "O padrão de nome não pode estar vazio" };
+    return { valid: false, error: "O padrÃ£o de nome nÃ£o pode estar vazio" };
   }
 
-  // Caracteres inválidos para nomes de arquivo no Windows
+  // Caracteres invÃ¡lidos para nomes de arquivo no Windows
   const invalidChars = /[<>:"/\\|?*]/;
   if (invalidChars.test(pattern)) {
     return {
       valid: false,
-      error: 'O padrão contém caracteres inválidos: < > : " / \\ | ? *',
+      error: 'O padrÃ£o contÃ©m caracteres invÃ¡lidos: < > : " / \\ | ? *',
     };
   }
 
@@ -192,7 +190,7 @@ function validateFilenamePattern(pattern) {
 }
 
 async function resetToDefaults() {
-  if (!confirm("Tem certeza que deseja restaurar as configurações padrão?")) {
+  if (!confirm("Tem certeza que deseja restaurar as configuraÃ§Ãµes padrÃ£o?")) {
     return;
   }
 
@@ -200,22 +198,22 @@ async function resetToDefaults() {
     await chrome.storage.local.set({ settings: DEFAULT_SETTINGS });
     await loadSettings();
     updateVisibility();
-    showNotification("Configurações restauradas!", "success");
+    showNotification("ConfiguraÃ§Ãµes restauradas!", "success");
   } catch (error) {
-    console.error("Erro ao restaurar configurações:", error);
-    showNotification("Erro ao restaurar configurações", "error");
+    console.error("Erro ao restaurar configuraÃ§Ãµes:", error);
+    showNotification("Erro ao restaurar configuraÃ§Ãµes", "error");
   }
 }
 
 // =============== Notifications ===============
 function showNotification(message, type = "info") {
-  // Remove notificação existente
+  // Remove notificaÃ§Ã£o existente
   const existing = document.querySelector(".notification");
   if (existing) {
     existing.remove();
   }
 
-  // Cria nova notificação
+  // Cria nova notificaÃ§Ã£o
   const notification = document.createElement("div");
   notification.className = `notification notification-${type}`;
   notification.innerHTML = `
@@ -223,7 +221,7 @@ function showNotification(message, type = "info") {
     <button class="notification-close">&times;</button>
   `;
 
-  // Estilo inline para a notificação
+  // Estilo inline para a notificaÃ§Ã£o
   notification.style.cssText = `
     position: fixed;
     bottom: 24px;
@@ -254,7 +252,7 @@ function showNotification(message, type = "info") {
       notification.remove();
     });
 
-  // Auto-remove após 3 segundos
+  // Auto-remove apÃ³s 3 segundos
   setTimeout(() => {
     if (notification.parentNode) {
       notification.style.animation = "slideOut 0.3s ease";
@@ -262,7 +260,7 @@ function showNotification(message, type = "info") {
     }
   }, 3000);
 
-  // Adiciona keyframes se não existirem
+  // Adiciona keyframes se nÃ£o existirem
   if (!document.querySelector("#notification-styles")) {
     const style = document.createElement("style");
     style.id = "notification-styles";

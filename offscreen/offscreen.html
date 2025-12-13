@@ -9,7 +9,12 @@
     Documento Offscreen para processamento de mídia.
     Este documento roda em background e mantém a gravação ativa
     mesmo quando o popup está fechado.
+    
+    Usa WebCodecs + mp4-muxer para gravação MP4 H.264 CFR nativa.
   -->
+    <!-- mp4-muxer para criação de arquivos MP4 -->
+    <script src="mp4-muxer.min.js"></script>
+    <!-- Script principal -->
     <script src="offscreen.js" type="module"></script>
   </body>
 </html>

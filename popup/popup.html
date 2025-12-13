@@ -55,7 +55,7 @@
 
       <!-- Status Display -->
       <div class="status-display" id="statusDisplay">
-        <div class="timer" id="timer">00:00</div>
+        <div class="timer hidden" id="timer">00:00</div>
         <div class="status-text" id="statusText">Pronto para gravar</div>
       </div>
 
@@ -134,15 +134,24 @@
           </div>
         </div>
 
-        <!-- Quality Selection -->
-        <div class="option-group">
-          <label class="option-label">Qualidade</label>
-          <select class="select-input" id="qualitySelect">
-            <option value="720p">720p HD</option>
-            <option value="1080p">1080p Full HD</option>
-            <option value="1440p">1440p QHD</option>
-            <option value="4k" selected>4K Ultra HD</option>
-          </select>
+        <!-- Quality & Format Selection (50/50) -->
+        <div class="option-row">
+          <div class="option-group half">
+            <label class="option-label">Qualidade</label>
+            <select class="select-input" id="qualitySelect">
+              <option value="720p">720p HD</option>
+              <option value="1080p">1080p Full HD</option>
+              <option value="1440p">1440p QHD</option>
+              <option value="4k" selected>4K Ultra HD</option>
+            </select>
+          </div>
+          <div class="option-group half">
+            <label class="option-label">Formato</label>
+            <select class="select-input" id="formatSelect">
+              <option value="mp4" selected>MP4 (H.264 CFR)</option>
+              <option value="webm">WebM (VP9)</option>
+            </select>
+          </div>
         </div>
 
         <!-- FPS Selection -->
@@ -169,6 +178,13 @@
               <span class="toggle-label">Microfone</span>
             </label>
           </div>
+        </div>
+
+        <!-- Nota sobre MP4 -->
+        <div class="option-group format-note" id="formatNote">
+          <span class="format-note-text"
+            >MP4 usa WebCodecs nativo para H.264 CFR</span
+          >
         </div>
       </div>
 

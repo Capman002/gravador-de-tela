@@ -1,4 +1,4 @@
-// Popup Script - Interface de controle da gravação
+﻿// Popup Script - Interface de controle da gravaÃ§Ã£o
 
 import {
   MESSAGE_TYPES,
@@ -21,9 +21,11 @@ const elements = {
   optionsPanel: document.getElementById("optionsPanel"),
   sourceButtons: document.getElementById("sourceButtons"),
   qualitySelect: document.getElementById("qualitySelect"),
+  formatSelect: document.getElementById("formatSelect"),
   fpsButtons: document.getElementById("fpsButtons"),
   captureAudio: document.getElementById("captureAudio"),
   captureMic: document.getElementById("captureMic"),
+  formatNote: document.getElementById("formatNote"),
 
   // Recording Controls
   recordingControls: document.getElementById("recordingControls"),
@@ -49,7 +51,7 @@ async function initialize() {
   setupEventListeners();
   updateUI();
 
-  // Mantém conexão com background para keep-alive durante gravação
+  // MantÃ©m conexÃ£o com background para keep-alive durante gravaÃ§Ã£o
   chrome.runtime.connect({ name: "keepalive" });
 }
 
@@ -64,9 +66,12 @@ async function loadState() {
       currentState.elapsedSeconds = response.elapsedSeconds || 0;
       currentState.settings = response.settings || {};
 
-      // Restaura configurações na UI
+      // Restaura configuraÃ§Ãµes na UI
       if (currentState.settings.quality) {
         elements.qualitySelect.value = currentState.settings.quality;
+      }
+      if (currentState.settings.format) {
+        elements.formatSelect.value = currentState.settings.format;
       }
       if (currentState.settings.captureAudio !== undefined) {
         elements.captureAudio.checked = currentState.settings.captureAudio;
@@ -74,6 +79,8 @@ async function loadState() {
       if (currentState.settings.captureMic !== undefined) {
         elements.captureMic.checked = currentState.settings.captureMic;
       }
+      // Atualiza nota de formato
+      updateFormatNote();
 
       // Restaura FPS selecionado
       updateFpsSelection(currentState.settings.fps || 60);
@@ -104,10 +111,14 @@ function setupEventListeners() {
     });
   });
 
-  // Audio toggles
+  // Audio toggles and settings
   elements.captureAudio.addEventListener("change", updateSettings);
   elements.captureMic.addEventListener("change", updateSettings);
   elements.qualitySelect.addEventListener("change", updateSettings);
+  elements.formatSelect.addEventListener("change", () => {
+    updateFormatNote();
+    updateSettings();
+  });
 
   // Recording controls
   elements.pauseBtn.addEventListener("click", pauseRecording);
@@ -138,11 +149,15 @@ function updateUI() {
 function updateTimerDisplay() {
   elements.timer.textContent = formatTime(currentState.elapsedSeconds);
 
-  elements.timer.classList.remove("recording", "paused");
+  elements.timer.classList.remove("recording", "paused", "hidden");
+
+  // Mostra timer apenas durante gravação ou pausa
   if (currentState.recording === RECORDING_STATE.RECORDING) {
     elements.timer.classList.add("recording");
   } else if (currentState.recording === RECORDING_STATE.PAUSED) {
     elements.timer.classList.add("paused");
+  } else {
+    elements.timer.classList.add("hidden");
   }
 }
 
@@ -181,7 +196,7 @@ function updateActionButton() {
       <svg class="record-icon" width="24" height="24" viewBox="0 0 24 24" fill="none">
         <circle cx="12" cy="12" r="8" fill="currentColor"/>
       </svg>
-      <span>Iniciar Gravação</span>
+      <span>Iniciar GravaÃ§Ã£o</span>
     `;
   } else {
     btn.classList.add("recording");
@@ -189,7 +204,7 @@ function updateActionButton() {
       <svg class="record-icon" width="24" height="24" viewBox="0 0 24 24" fill="none">
         <rect x="6" y="6" width="12" height="12" rx="2" fill="currentColor"/>
       </svg>
-      <span>Parar Gravação</span>
+      <span>Parar GravaÃ§Ã£o</span>
     `;
   }
 }
@@ -237,9 +252,21 @@ function updateFpsSelection(fps) {
   });
 }
 
+function updateFormatNote() {
+  const format = elements.formatSelect.value;
+  if (format === "mp4") {
+    elements.formatNote.querySelector(".format-note-text").textContent =
+      "MP4 usa WebCodecs nativo para H.264 CFR";
+  } else {
+    elements.formatNote.querySelector(".format-note-text").textContent =
+      "WebM usa MediaRecorder nativo (VP9 VFR)";
+  }
+}
+
 async function updateSettings() {
   const settings = {
     quality: elements.qualitySelect.value,
+    format: elements.formatSelect.value,
     fps: currentState.settings.fps || 60,
     captureAudio: elements.captureAudio.checked,
     captureMic: elements.captureMic.checked,
@@ -276,10 +303,10 @@ async function startRecording() {
     });
 
     if (!response?.success) {
-      showError(response?.error || "Erro ao iniciar gravação");
+      showError(response?.error || "Erro ao iniciar gravaÃ§Ã£o");
     }
   } catch (error) {
-    console.error("Erro ao iniciar gravação:", error);
+    console.error("Erro ao iniciar gravaÃ§Ã£o:", error);
     showError(error.message);
   }
 }
@@ -290,7 +317,7 @@ async function stopRecording() {
       type: MESSAGE_TYPES.STOP_RECORDING,
     });
   } catch (error) {
-    console.error("Erro ao parar gravação:", error);
+    console.error("Erro ao parar gravaÃ§Ã£o:", error);
   }
 }
 

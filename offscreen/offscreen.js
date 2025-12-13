@@ -117,6 +117,7 @@ async function startWebCodecsRecording(options) {
       codec: "avc",
       width: width,
       height: height,
+      frameRate: fps, // Indica ao muxer a taxa de quadros esperada para CFR
     },
     audio: hasAudio
       ? {
@@ -199,8 +200,10 @@ async function startWebCodecsRecording(options) {
   isPaused = false;
   frameCount = 0;
 
-  // Loop de leitura de frames
-  const frameDuration = 1000000 / fps; // Em microsegundos
+  // Loop de leitura de frames com CFR forçado
+  const frameDurationMicros = 1000000 / fps; // Duração de cada frame em microsegundos
+  let baseTimestamp = null; // Timestamp base para cálculo CFR
+  let cfrFrameCount = 0; // Contador de frames para CFR
 
   const readFrames = async () => {
     try {
@@ -210,10 +213,28 @@ async function startWebCodecsRecording(options) {
         if (done || !isRecording) break;
 
         if (!isPaused) {
-          videoEncoder.encode(frame, {
-            keyFrame: frameCount % (fps * 2) === 0, // Keyframe a cada 2 segundos
+          // Captura o timestamp base do primeiro frame
+          if (baseTimestamp === null) {
+            baseTimestamp = frame.timestamp;
+          }
+
+          // Calcula o timestamp CFR forçado baseado na contagem de frames
+          // Isso garante espaçamento uniforme: frame 0 = 0µs, frame 1 = 16666µs (para 60fps), etc.
+          const cfrTimestamp =
+            baseTimestamp + Math.round(cfrFrameCount * frameDurationMicros);
+
+          // Cria um novo VideoFrame com o timestamp CFR forçado
+          const cfrFrame = new VideoFrame(frame, {
+            timestamp: cfrTimestamp,
+            duration: Math.round(frameDurationMicros),
           });
 
+          videoEncoder.encode(cfrFrame, {
+            keyFrame: cfrFrameCount % (fps * 2) === 0, // Keyframe a cada 2 segundos
+          });
+
+          cfrFrame.close();
+          cfrFrameCount++;
           frameCount++;
         }
 

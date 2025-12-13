@@ -1,10 +1,15 @@
 # 🎬 Gravador de Tela Pro
 
-Uma extensão Chrome de código aberto para gravação de tela em alta qualidade, com suporte a **MP4 H.264 CFR** nativo via WebCodecs.
+Uma extensão Chrome de código aberto para gravação de tela em alta qualidade, com suporte a **MP4 H.264 CFR** nativo via WebCodecs, eliminando a necessidade de reprocessamento ou conversão externa.
 
 ![Chrome](https://img.shields.io/badge/Chrome-116+-green?logo=google-chrome)
 ![Manifest V3](https://img.shields.io/badge/Manifest-V3-blue)
 ![License](https://img.shields.io/badge/License-MIT-yellow)
+![HTML](https://img.shields.io/badge/HTML-E34F26?style=flat&logo=html5&logoColor=white)
+![JavaScript](https://img.shields.io/badge/JavaScript-F7DF1E?style=flat&logo=javascript&logoColor=white)
+![CSS](https://img.shields.io/badge/CSS-663399?style=flat&logo=css&logoColor=white)
+![JSON](https://img.shields.io/badge/JSON-000000?style=flat&logo=json&logoColor=white)
+![Markdown](https://img.shields.io/badge/Markdown-000000?style=flat&logo=markdown&logoColor=white)
 
 ## ✨ Funcionalidades
 
@@ -16,6 +21,20 @@ Uma extensão Chrome de código aberto para gravação de tela em alta qualidade
 - 🔒 **100% local** - Nenhum dado enviado para servidores externos
 - ⌨️ **Atalhos de teclado** - `Alt+Shift+R` para abrir, `Alt+Shift+S` para gravar/parar
 
+## 📸 Screenshots
+
+<div align="center">
+  <img src="public/popup.png" alt="Interface Principal" width="300">
+  <p><em>Interface principal do popup</em></p>
+</div>
+
+<div align="center">
+  <img src="public/config-1.png" alt="Configurações de Vídeo" width="600">
+  <img src="public/config-2.png" alt="Configurações de Áudio" width="600">
+  <img src="public/config-3.png" alt="Configurações de Gravação" width="600">
+  <p><em>Página de configurações</em></p>
+</div>
+
 ## 📦 Formatos Suportados
 
 | Formato  | Codec              | CFR    | Uso                                     |
@@ -25,25 +44,13 @@ Uma extensão Chrome de código aberto para gravação de tela em alta qualidade
 
 ## 🚀 Instalação
 
-### Via Chrome Web Store
+Como este projeto é uma extensão não compactada, a instalação deve ser feita manualmente via modo de desenvolvedor:
 
-_Em breve_
-
-### Manual (Desenvolvedor)
-
-1. Clone o repositório:
-
-```bash
-git clone https://github.com/seu-usuario/gravador-de-tela.git
-```
-
-2. Abra `chrome://extensions` no Chrome
-
-3. Ative o **Modo do desenvolvedor** (canto superior direito)
-
-4. Clique em **Carregar sem compactação**
-
-5. Selecione a pasta do projeto
+1. Baixe ou clone este repositório para uma pasta local.
+2. Abra o navegador Chrome e acesse `chrome://extensions`.
+3. Ative a opção **"Modo do desenvolvedor"** no canto superior direito.
+4. Clique no botão **"Carregar sem compactação"** (Load unpacked).
+5. Selecione a pasta raiz do projeto (`gravador-de-tela/`).
 
 ## 🎮 Como Usar
 
@@ -78,23 +85,15 @@ Acesse as configurações clicando no ícone ⚙️ no popup:
 
 ```
 gravador-de-tela/
-├── manifest.json          # Configuração da extensão
-├── background.js          # Service Worker principal
-├── popup/                 # Interface do usuário
-│   ├── popup.html
-│   ├── popup.css
-│   └── popup.js
-├── offscreen/             # Processamento de mídia
-│   ├── offscreen.html
-│   ├── offscreen.js
-│   └── mp4-muxer.min.js   # Muxer MP4 (31KB)
-├── options/               # Página de configurações
-│   ├── options.html
-│   ├── options.css
-│   └── options.js
-├── utils/                 # Utilitários compartilhados
-│   └── constants.js
-└── icons/                 # Ícones da extensão
+├── manifest.json          # Definição da extensão (Permissões, Versão, V3)
+├── background.js          # Service Worker: Gerenciamento de estado e eventos
+├── popup/                 # Interface principal (UI de controle)
+├── options/               # Página de configurações (Resolução, Codecs)
+├── offscreen/             # Processamento de mídia em background
+│   ├── offscreen.html     # Contexto DOM para WebCodecs
+│   ├── offscreen.js       # Lógica de encoding e muxing
+│   └── mp4-muxer.min.js   # Biblioteca para container MP4
+└── utils/                 # Constantes e helpers compartilhados
 ```
 
 ## 🔧 Requisitos
@@ -141,4 +140,17 @@ Encontrou um bug? Abra uma [issue](https://github.com/seu-usuario/gravador-de-te
 
 ---
 
-**Feito com ❤️ para a comunidade**
+## FAQ Técnico
+
+**Por que utilizar um Offscreen Document?**
+
+O Service Worker (padrão no Manifest V3) não possui acesso direto ao DOM (`window` ou `document`), o que impede o uso de certas APIs de mídia. O arquivo `offscreen/offscreen.html` é criado dinamicamente para hospedar o contexto necessário para a `WebCodecs API` e o processamento de streams de áudio/vídeo, mantendo a gravação ativa mesmo se o popup for fechado.
+
+**Qual a diferença entre o modo WebCodecs e MediaRecorder?**
+
+- **WebCodecs (Padrão MP4):** Permite controle frame-a-frame da codificação. Isso garante que o arquivo final seja H.264 com Constant Frame Rate (CFR), essencial para compatibilidade com editores de vídeo como Premiere e DaVinci Resolve.
+- **MediaRecorder (Fallback WebM):** API de alto nível que geralmente grava em Variable Frame Rate (VFR) e codecs VP8/VP9. É usado apenas se a aceleração de hardware H.264 não estiver disponível.
+
+---
+
+**Esse README foi feito com [Buildmydocs](https://buildmydocs.dev)**

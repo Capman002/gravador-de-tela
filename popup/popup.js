@@ -1,4 +1,4 @@
-﻿// Popup Script - Interface de controle da gravaÃ§Ã£o
+﻿// Popup Script - Interface de controle da gravação
 
 import {
   MESSAGE_TYPES,
@@ -51,7 +51,7 @@ async function initialize() {
   setupEventListeners();
   updateUI();
 
-  // MantÃ©m conexÃ£o com background para keep-alive durante gravaÃ§Ã£o
+  // Mantém conexão com background para keep-alive durante gravação
   chrome.runtime.connect({ name: "keepalive" });
 }
 
@@ -66,7 +66,7 @@ async function loadState() {
       currentState.elapsedSeconds = response.elapsedSeconds || 0;
       currentState.settings = response.settings || {};
 
-      // Restaura configuraÃ§Ãµes na UI
+      // Restaura configurações na UI
       if (currentState.settings.quality) {
         elements.qualitySelect.value = currentState.settings.quality;
       }
@@ -86,7 +86,7 @@ async function loadState() {
       updateFpsSelection(currentState.settings.fps || 60);
     }
   } catch (error) {
-    console.error("Erro ao carregar estado:", error);
+    // Silently handle errors
   }
 }
 
@@ -183,55 +183,67 @@ function updateStatusText() {
   }
 
   elements.statusText.textContent = text;
-  elements.statusText.className = `status-text ${className}`;
+  elements.statusText.className = "status-text " + className;
 }
 
 function updateActionButton() {
-  const btn = elements.actionBtn;
-  const content = elements.actionBtnContent;
+  const isRecording =
+    currentState.recording === RECORDING_STATE.RECORDING ||
+    currentState.recording === RECORDING_STATE.PAUSED;
 
-  if (currentState.recording === RECORDING_STATE.IDLE) {
-    btn.classList.remove("recording");
-    content.innerHTML = `
-      <svg class="record-icon" width="24" height="24" viewBox="0 0 24 24" fill="none">
-        <circle cx="12" cy="12" r="8" fill="currentColor"/>
+  if (isRecording) {
+    elements.actionBtn.classList.add("recording");
+    elements.actionBtnContent.innerHTML = `
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+        <rect x="6" y="6" width="12" height="12" rx="2" />
       </svg>
-      <span>Iniciar GravaÃ§Ã£o</span>
+      <span>Parar Gravação</span>
     `;
   } else {
-    btn.classList.add("recording");
-    content.innerHTML = `
-      <svg class="record-icon" width="24" height="24" viewBox="0 0 24 24" fill="none">
-        <rect x="6" y="6" width="12" height="12" rx="2" fill="currentColor"/>
-      </svg>
-      <span>Parar GravaÃ§Ã£o</span>
+    elements.actionBtn.classList.remove("recording");
+    elements.actionBtnContent.innerHTML = `
+      <span class="record-dot"></span>
+      <span>Iniciar Gravação</span>
     `;
   }
+
+  elements.actionBtn.disabled =
+    currentState.recording === RECORDING_STATE.STOPPING;
 }
 
 function updatePanelVisibility() {
-  if (currentState.recording === RECORDING_STATE.IDLE) {
-    elements.optionsPanel.classList.remove("hidden");
-  } else {
+  const isRecording =
+    currentState.recording === RECORDING_STATE.RECORDING ||
+    currentState.recording === RECORDING_STATE.PAUSED;
+
+  if (isRecording) {
     elements.optionsPanel.classList.add("hidden");
+  } else {
+    elements.optionsPanel.classList.remove("hidden");
   }
 }
 
 function updateRecordingControls() {
-  if (currentState.recording === RECORDING_STATE.RECORDING) {
+  const isRecording =
+    currentState.recording === RECORDING_STATE.RECORDING ||
+    currentState.recording === RECORDING_STATE.PAUSED;
+
+  if (isRecording) {
     elements.recordingControls.classList.remove("hidden");
-    elements.pauseBtn.classList.remove("hidden");
-    elements.resumeBtn.classList.add("hidden");
-  } else if (currentState.recording === RECORDING_STATE.PAUSED) {
-    elements.recordingControls.classList.remove("hidden");
-    elements.pauseBtn.classList.add("hidden");
-    elements.resumeBtn.classList.remove("hidden");
+
+    if (currentState.recording === RECORDING_STATE.PAUSED) {
+      elements.pauseBtn.classList.add("hidden");
+      elements.resumeBtn.classList.remove("hidden");
+    } else {
+      elements.pauseBtn.classList.remove("hidden");
+      elements.resumeBtn.classList.add("hidden");
+    }
   } else {
     elements.recordingControls.classList.add("hidden");
   }
 }
 
-// =============== Source & Settings Selection ===============
+// =============== Source Selection ===============
 function selectSource(source) {
   currentState.selectedSource = source;
 
@@ -240,6 +252,7 @@ function selectSource(source) {
   });
 }
 
+// =============== FPS Selection ===============
 function selectFps(fps) {
   currentState.settings.fps = fps;
   updateFpsSelection(fps);
@@ -296,18 +309,15 @@ async function startRecording() {
 
     const response = await chrome.runtime.sendMessage({
       type: MESSAGE_TYPES.START_RECORDING,
-      options: {
-        ...currentState.settings,
-        source: currentState.selectedSource,
-      },
+      source: currentState.selectedSource,
     });
 
-    if (!response?.success) {
-      showError(response?.error || "Erro ao iniciar gravaÃ§Ã£o");
+    if (response && response.success) {
+      currentState.recording = RECORDING_STATE.RECORDING;
+      updateUI();
     }
   } catch (error) {
-    console.error("Erro ao iniciar gravaÃ§Ã£o:", error);
-    showError(error.message);
+    // Handle silently
   }
 }
 
@@ -317,7 +327,7 @@ async function stopRecording() {
       type: MESSAGE_TYPES.STOP_RECORDING,
     });
   } catch (error) {
-    console.error("Erro ao parar gravaÃ§Ã£o:", error);
+    // Handle silently
   }
 }
 
@@ -327,7 +337,7 @@ async function pauseRecording() {
       type: MESSAGE_TYPES.PAUSE_RECORDING,
     });
   } catch (error) {
-    console.error("Erro ao pausar:", error);
+    // Handle silently
   }
 }
 
@@ -337,21 +347,9 @@ async function resumeRecording() {
       type: MESSAGE_TYPES.RESUME_RECORDING,
     });
   } catch (error) {
-    console.error("Erro ao retomar:", error);
+    // Handle silently
   }
 }
 
-// =============== Error Handling ===============
-function showError(message) {
-  // Temporariamente mostra no status
-  elements.statusText.textContent = `Erro: ${message}`;
-  elements.statusText.style.color = "#ef4444";
-
-  setTimeout(() => {
-    elements.statusText.style.color = "";
-    updateStatusText();
-  }, 3000);
-}
-
 // =============== Start ===============
-document.addEventListener("DOMContentLoaded", initialize);
+initialize();

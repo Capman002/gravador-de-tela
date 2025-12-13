@@ -1,4 +1,4 @@
-﻿// Offscreen Document - GravaÃ§Ã£o MP4 H.264 CFR via WebCodecs + mp4-muxer
+﻿// Offscreen Document - Gravação MP4 H.264 CFR via WebCodecs + mp4-muxer
 
 import {
   QUALITY_PRESETS,
@@ -6,10 +6,7 @@ import {
   MESSAGE_TYPES,
 } from "../utils/constants.js";
 
-// Importa mp4-muxer (serÃ¡ carregado via script tag no HTML)
-// O Mp4Muxer estarÃ¡ disponÃ­vel globalmente
-
-// Estado da gravaÃ§Ã£o
+// Estado da gravação
 let isRecording = false;
 let isPaused = false;
 let displayStream = null;
@@ -67,7 +64,6 @@ async function getDisplayMediaStream(options) {
     displayStream = await navigator.mediaDevices.getDisplayMedia(constraints);
     return displayStream;
   } catch (error) {
-    console.error("Erro ao obter stream de display:", error);
     throw error;
   }
 }
@@ -88,7 +84,6 @@ async function getMicrophoneStream(options) {
     });
     return micStream;
   } catch (error) {
-    console.error("Erro ao obter stream do microfone:", error);
     return null;
   }
 }
@@ -102,15 +97,13 @@ async function startWebCodecsRecording(options) {
   const width = qualityPreset.width;
   const height = qualityPreset.height;
 
-
-  // ObtÃ©m streams
+  // Obtém streams
   const display = await getDisplayMediaStream(options);
   const mic = await getMicrophoneStream(options);
 
   // Calcula bitrate
   const videoBitrate = calculateBitrate(qualityPreset, fps);
   const audioBitrate = 128000;
-
 
   // Cria o target do muxer (ArrayBuffer)
   muxerTarget = new Mp4Muxer.ArrayBufferTarget();
@@ -136,20 +129,17 @@ async function startWebCodecsRecording(options) {
     firstTimestampBehavior: "offset",
   });
 
-  // Configura o encoder de vÃ­deo
+  // Configura o encoder de vídeo
   videoEncoder = new VideoEncoder({
     output: (chunk, meta) => {
       muxer.addVideoChunk(chunk, meta);
     },
     error: (e) => {
-      console.error("[WebCodecs] Erro no VideoEncoder:", e);
       sendError(e.message);
     },
   });
 
   // H.264 High Profile
-  // avc1.640033 = High Profile, Level 5.1 (4K 60fps)
-  // avc1.64002A = High Profile, Level 4.2 (4K 30fps ou 1080p 60fps)
   const codecLevel = height > 1080 && fps > 30 ? "640033" : "64002A";
 
   videoEncoder.configure({
@@ -162,14 +152,14 @@ async function startWebCodecsRecording(options) {
     avc: { format: "avc" },
   });
 
-  // Configura encoder de Ã¡udio se necessÃ¡rio
+  // Configura encoder de áudio se necessário
   if (hasAudio) {
     audioEncoder = new AudioEncoder({
       output: (chunk, meta) => {
         muxer.addAudioChunk(chunk, meta);
       },
       error: (e) => {
-        console.error("[WebCodecs] Erro no AudioEncoder:", e);
+        // Handle silently
       },
     });
 
@@ -181,19 +171,19 @@ async function startWebCodecsRecording(options) {
     });
   }
 
-  // Processa vÃ­deo
+  // Processa vídeo
   const videoTrack = display.getVideoTracks()[0];
   const processor = new MediaStreamTrackProcessor({ track: videoTrack });
   const reader = processor.readable.getReader();
 
-  // Handle quando usuÃ¡rio para o compartilhamento
+  // Handle quando usuário para o compartilhamento
   videoTrack.onended = () => {
     if (isRecording) {
       stopRecording();
     }
   };
 
-  // Processa Ã¡udio se tiver
+  // Processa áudio se tiver
   if (hasAudio) {
     const audioTracks = [
       ...display.getAudioTracks(),
@@ -211,7 +201,6 @@ async function startWebCodecsRecording(options) {
 
   // Loop de leitura de frames
   const frameDuration = 1000000 / fps; // Em microsegundos
-  let expectedTimestamp = 0;
 
   const readFrames = async () => {
     try {
@@ -221,9 +210,6 @@ async function startWebCodecsRecording(options) {
         if (done || !isRecording) break;
 
         if (!isPaused) {
-          // Usa timestamp fixo para CFR
-          const timestamp = frameCount * frameDuration;
-
           videoEncoder.encode(frame, {
             keyFrame: frameCount % (fps * 2) === 0, // Keyframe a cada 2 segundos
           });
@@ -234,7 +220,7 @@ async function startWebCodecsRecording(options) {
         frame.close();
       }
     } catch (error) {
-      console.error("[WebCodecs] Erro no loop de frames:", error);
+      // Handle silently
     }
   };
 
@@ -266,11 +252,9 @@ async function processAudio(audioTracks, options) {
       gain.connect(destination);
     }
 
-    // Cria um processador de Ã¡udio
+    // Cria um processador de áudio
     const audioTrack = destination.stream.getAudioTracks()[0];
 
-    // Usa MediaStreamTrackProcessor para Ã¡udio tambÃ©m
-    // Nota: Isso pode nÃ£o estar disponÃ­vel em todos os navegadores
     if (typeof MediaStreamTrackProcessor !== "undefined") {
       const audioProcessor = new MediaStreamTrackProcessor({
         track: audioTrack,
@@ -291,14 +275,14 @@ async function processAudio(audioTracks, options) {
             audioData.close();
           }
         } catch (error) {
-          console.error("[WebCodecs] Erro no loop de Ã¡udio:", error);
+          // Handle silently
         }
       };
 
       readAudio();
     }
   } catch (error) {
-    console.error("[WebCodecs] Erro ao processar Ã¡udio:", error);
+    // Handle silently
   }
 }
 
@@ -320,13 +304,9 @@ async function stopWebCodecsRecording() {
     // Finaliza muxer
     muxer.finalize();
 
-    // ObtÃ©m o arquivo final
+    // Obtém o arquivo final
     const buffer = muxerTarget.buffer;
     const blob = new Blob([buffer], { type: "video/mp4" });
-
-      size: blob.size,
-      frames: frameCount,
-    });
 
     // Limpa recursos
     cleanupStreams();
@@ -343,7 +323,6 @@ async function stopWebCodecsRecording() {
 
     return { success: true };
   } catch (error) {
-    console.error("[WebCodecs] Erro ao parar gravaÃ§Ã£o:", error);
     cleanupStreams();
     return { success: false, error: error.message };
   }
@@ -360,7 +339,7 @@ async function startMediaRecorderRecording(options) {
   // Combina streams
   let finalStream = display;
   if (mic && display.getAudioTracks().length > 0) {
-    // Combina Ã¡udios
+    // Combina áudios
     audioContext = new AudioContext();
     const destination = audioContext.createMediaStreamDestination();
 
@@ -419,11 +398,10 @@ async function startMediaRecorderRecording(options) {
   };
 
   mediaRecorder.onerror = (event) => {
-    console.error("Erro no MediaRecorder:", event.error);
     sendError(event.error?.message || "Erro desconhecido");
   };
 
-  // Handler quando usuÃ¡rio para o compartilhamento
+  // Handler quando usuário para o compartilhamento
   display.getVideoTracks()[0].onended = () => {
     if (mediaRecorder && mediaRecorder.state !== "inactive") {
       stopMediaRecorderRecording();
@@ -438,7 +416,7 @@ async function startMediaRecorderRecording(options) {
 
 async function stopMediaRecorderRecording() {
   if (!mediaRecorder || mediaRecorder.state === "inactive") {
-    return { success: false, error: "Nenhuma gravaÃ§Ã£o ativa" };
+    return { success: false, error: "Nenhuma gravação ativa" };
   }
 
   return new Promise((resolve) => {
@@ -505,7 +483,6 @@ async function startRecording(options) {
   currentOptions = options;
   const format = RECORDING_FORMATS[options.format] || RECORDING_FORMATS.mp4;
 
-
   // Verifica suporte a WebCodecs
   const webCodecsSupported =
     typeof VideoEncoder !== "undefined" &&
@@ -528,7 +505,7 @@ async function stopRecording() {
     return stopMediaRecorderRecording();
   }
 
-  return { success: false, error: "Nenhuma gravaÃ§Ã£o ativa" };
+  return { success: false, error: "Nenhuma gravação ativa" };
 }
 
 function pauseRecording() {
@@ -586,4 +563,3 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
   return true;
 });
-

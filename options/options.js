@@ -1,4 +1,4 @@
-﻿// Options Page Script - Gerencia configuraÃ§Ãµes da extensÃ£o
+﻿// Options Page Script - Gerencia configurações da extensão
 
 import { DEFAULT_SETTINGS } from "../utils/constants.js";
 
@@ -49,8 +49,12 @@ async function loadSettings() {
   // Video
   elements.defaultQuality.value = settings.quality;
   elements.defaultFps.value = settings.fps.toString();
-  elements.defaultCodec.value = settings.codec;
-  updateCodecHint(settings.codec);
+
+  // Compatibilidade: usar format ou codec
+  if (elements.defaultCodec) {
+    elements.defaultCodec.value = settings.format || settings.codec || "mp4";
+    updateCodecHint(settings.format || settings.codec || "mp4");
+  }
 
   // Audio
   elements.captureAudio.checked = settings.captureAudio;
@@ -70,13 +74,14 @@ async function loadSettings() {
 // Atualiza dica do codec
 function updateCodecHint(codec) {
   const hints = {
-    h264_mp4: "âœ… CompatÃ­vel com DaVinci Resolve, Premiere, After Effects",
+    mp4: "Compativel com DaVinci Resolve, Premiere, After Effects",
+    webm: "Alta qualidade, bom para YouTube e web",
+    h264_mp4: "Compativel com DaVinci Resolve, Premiere, After Effects",
     vp9: "Alta qualidade, bom para YouTube e web",
     vp8: "Boa compatibilidade com navegadores antigos",
-    h264_webm: "Usa aceleraÃ§Ã£o de hardware, WebM container",
   };
   if (elements.codecHint) {
-    elements.codecHint.textContent = hints[codec] || hints.h264_mp4;
+    elements.codecHint.textContent = hints[codec] || hints.mp4;
   }
 }
 
@@ -90,9 +95,11 @@ function setupEventListeners() {
   elements.showCountdown.addEventListener("change", updateVisibility);
 
   // Codec hint update
-  elements.defaultCodec.addEventListener("change", () => {
-    updateCodecHint(elements.defaultCodec.value);
-  });
+  if (elements.defaultCodec) {
+    elements.defaultCodec.addEventListener("change", () => {
+      updateCodecHint(elements.defaultCodec.value);
+    });
+  }
 
   // Volume sliders update display
   elements.tabVolume.addEventListener("input", () => {
@@ -137,7 +144,7 @@ function getSettingsFromUI() {
   return {
     quality: elements.defaultQuality.value,
     fps: parseInt(elements.defaultFps.value),
-    codec: elements.defaultCodec.value,
+    format: elements.defaultCodec ? elements.defaultCodec.value : "mp4",
     captureAudio: elements.captureAudio.checked,
     captureMic: elements.captureMic.checked,
     tabVolume: parseInt(elements.tabVolume.value),
@@ -152,11 +159,7 @@ function getSettingsFromUI() {
 async function saveSettings() {
   const settings = getSettingsFromUI();
 
-    "[Options] Salvando configuraÃ§Ãµes:",
-    JSON.stringify(settings, null, 2)
-  );
-
-  // Valida padrÃ£o de nome de arquivo
+  // Valida padrao de nome de arquivo
   const filenameValidation = validateFilenamePattern(settings.filenamePattern);
   if (!filenameValidation.valid) {
     showNotification(filenameValidation.error, "error");
@@ -165,24 +168,23 @@ async function saveSettings() {
 
   try {
     await chrome.storage.local.set({ settings });
-    showNotification("ConfiguraÃ§Ãµes salvas com sucesso!", "success");
+    showNotification("Configuracoes salvas com sucesso!", "success");
   } catch (error) {
-    console.error("Erro ao salvar configuraÃ§Ãµes:", error);
-    showNotification("Erro ao salvar configuraÃ§Ãµes", "error");
+    showNotification("Erro ao salvar configuracoes", "error");
   }
 }
 
 function validateFilenamePattern(pattern) {
   if (!pattern || pattern.trim() === "") {
-    return { valid: false, error: "O padrÃ£o de nome nÃ£o pode estar vazio" };
+    return { valid: false, error: "O padrao de nome nao pode estar vazio" };
   }
 
-  // Caracteres invÃ¡lidos para nomes de arquivo no Windows
+  // Caracteres invalidos para nomes de arquivo no Windows
   const invalidChars = /[<>:"/\\|?*]/;
   if (invalidChars.test(pattern)) {
     return {
       valid: false,
-      error: 'O padrÃ£o contÃ©m caracteres invÃ¡lidos: < > : " / \\ | ? *',
+      error: 'O padrao contem caracteres invalidos: < > : " / \\ | ? *',
     };
   }
 
@@ -190,7 +192,7 @@ function validateFilenamePattern(pattern) {
 }
 
 async function resetToDefaults() {
-  if (!confirm("Tem certeza que deseja restaurar as configuraÃ§Ãµes padrÃ£o?")) {
+  if (!confirm("Tem certeza que deseja restaurar as configuracoes padrao?")) {
     return;
   }
 
@@ -198,97 +200,35 @@ async function resetToDefaults() {
     await chrome.storage.local.set({ settings: DEFAULT_SETTINGS });
     await loadSettings();
     updateVisibility();
-    showNotification("ConfiguraÃ§Ãµes restauradas!", "success");
+    showNotification("Configuracoes restauradas!", "success");
   } catch (error) {
-    console.error("Erro ao restaurar configuraÃ§Ãµes:", error);
-    showNotification("Erro ao restaurar configuraÃ§Ãµes", "error");
+    showNotification("Erro ao restaurar configuracoes", "error");
   }
 }
 
 // =============== Notifications ===============
 function showNotification(message, type = "info") {
-  // Remove notificaÃ§Ã£o existente
+  // Remove notificacao existente
   const existing = document.querySelector(".notification");
   if (existing) {
     existing.remove();
   }
 
-  // Cria nova notificaÃ§Ã£o
   const notification = document.createElement("div");
-  notification.className = `notification notification-${type}`;
-  notification.innerHTML = `
-    <span>${message}</span>
-    <button class="notification-close">&times;</button>
-  `;
+  notification.className = `notification ${type}`;
+  notification.textContent = message;
 
-  // Estilo inline para a notificaÃ§Ã£o
-  notification.style.cssText = `
-    position: fixed;
-    bottom: 24px;
-    right: 24px;
-    padding: 16px 20px;
-    background: ${
-      type === "success" ? "#22c55e" : type === "error" ? "#ef4444" : "#3b82f6"
-    };
-    color: white;
-    border-radius: 8px;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    font-size: 14px;
-    font-weight: 500;
-    z-index: 1000;
-    animation: slideIn 0.3s ease;
-  `;
-
-  // Adiciona ao DOM
   document.body.appendChild(notification);
 
-  // Event listener para fechar
-  notification
-    .querySelector(".notification-close")
-    .addEventListener("click", () => {
-      notification.remove();
-    });
+  // Anima entrada
+  setTimeout(() => notification.classList.add("show"), 10);
 
-  // Auto-remove apÃ³s 3 segundos
+  // Remove apos 3 segundos
   setTimeout(() => {
-    if (notification.parentNode) {
-      notification.style.animation = "slideOut 0.3s ease";
-      setTimeout(() => notification.remove(), 300);
-    }
+    notification.classList.remove("show");
+    setTimeout(() => notification.remove(), 300);
   }, 3000);
-
-  // Adiciona keyframes se nÃ£o existirem
-  if (!document.querySelector("#notification-styles")) {
-    const style = document.createElement("style");
-    style.id = "notification-styles";
-    style.textContent = `
-      @keyframes slideIn {
-        from { transform: translateX(100%); opacity: 0; }
-        to { transform: translateX(0); opacity: 1; }
-      }
-      @keyframes slideOut {
-        from { transform: translateX(0); opacity: 1; }
-        to { transform: translateX(100%); opacity: 0; }
-      }
-      .notification-close {
-        background: none;
-        border: none;
-        color: white;
-        font-size: 20px;
-        cursor: pointer;
-        opacity: 0.7;
-        transition: opacity 0.2s;
-      }
-      .notification-close:hover {
-        opacity: 1;
-      }
-    `;
-    document.head.appendChild(style);
-  }
 }
 
 // =============== Start ===============
-document.addEventListener("DOMContentLoaded", initialize);
+initialize();

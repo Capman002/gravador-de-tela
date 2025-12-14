@@ -131,7 +131,7 @@ Contribuições são bem-vindas! Por favor:
 
 ## 🐛 Reportando Bugs
 
-Encontrou um bug? Abra uma [issue](https://github.com/seu-usuario/gravador-de-tela/issues) com:
+Encontrou um bug? Abra uma [issue](https://github.com/Capman002/gravador-de-tela/issues) com:
 
 - Descrição do problema
 - Passos para reproduzir

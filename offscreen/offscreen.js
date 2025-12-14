@@ -141,7 +141,8 @@ async function startWebCodecsRecording(options) {
   });
 
   // H.264 High Profile
-  const codecLevel = height > 1080 && fps > 30 ? "640033" : "64002A";
+  // Level 5.1 (640033) para 4K OU 60fps, Level 4.2 (64002A) para resoluções menores a 30fps
+  const codecLevel = height > 1080 || fps > 30 ? "640033" : "64002A";
 
   videoEncoder.configure({
     codec: `avc1.${codecLevel}`,
